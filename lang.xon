@@ -1,0 +1,13 @@
+; lang.xon -- what this bundle is.
+
+(lang "infocom")
+
+; Self-contained: this bundle depends on nothing but the platform.
+;
+; Helium, plus exactly the libraries this bundle imports and nothing
+; ambient: a story needs integers, bytes and a file, none of the tower.
+(dialect he)
+
+(requires-release "v0.24.0")
+
+(entry "run.x")
