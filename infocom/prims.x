@@ -18,7 +18,7 @@
 
 (provide infocom/prims
   zm+ zm- zm* zm/ zm% zm& zm| zm^ zm<< zm>> zm< zm=
-  %zm-pref %zm-pset! %zm-str->ptr %zm-str-make
+  %zm-pref %zm-pset! %zm-mem-copy %zm-str->ptr %zm-str-make
   %zm-obj-make %zm-obj-ref %zm-obj-set! %zm-vector-type %zm-vec
   %zm-char->int %zm-byte-ref %zm-byte-len
   %zm-rev %zm-rev-onto %zm-length %zm-assq %zm-hex-str
@@ -42,6 +42,8 @@
 ; pointer prims take a byte offset and a width; a width-1 read is signed.
 (def %zm-pref (prim-ref (lit ptr) (lit ref)))
 (def %zm-pset! (prim-ref (lit ptr) (lit set!)))
+; (mem copy DST SRC N): a block copy between pointers, memcpy itself.
+(def %zm-mem-copy (prim-ref (lit mem) (lit copy)))
 (def %zm-str->ptr (prim-ref (lit str) (lit ->ptr)))
 (def %zm-str-make (prim-ref (lit str) (lit make)))
 

@@ -91,3 +91,26 @@ verdicts are the check: the lines naming a failure, and the summary.
 ```output
 All tests passed.
 ```
+
+### undo and multi-level undo
+
+Its undo tests, with undo now served: each save_undo, its restore_undo
+answering 2, and the state put back.
+
+```infocom
+(zm-play-grep "praxix.z5" (list "undo" "multiundo" "quit") (list "claims" "succeeded" "FAIL" "Passed" "failed"))
+```
+---
+```output
+Interpreter claims to support undo.
+Undo succeeded, return value 2.
+Undo succeeded, return value 2.
+Undo succeeded, return value 2.
+Undo succeeded, return value 2.
+Undo succeeded, return value 2.
+Passed.
+Interpreter claims to support undo.
+Undo 2 succeeded, return value 2.
+Undo 1 succeeded, return value 2.
+Passed.
+```

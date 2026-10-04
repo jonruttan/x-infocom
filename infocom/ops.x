@@ -402,8 +402,11 @@
               (def n (%zm-s p))
               (if (zm< n 0) (%zm-w (zm>> (%zm-s x) (zm- 0 n))) (%zm-w (zm<< x n))))))
         (%zm-op! 4 4 "set_font" #t #f #f (%zm-store1 (fn (_ f) (if (zm= f 1) 1 0))))
-        (%zm-op! 4 9 "save_undo" #t #f #f (%zm-store1 (fn (_ x) 65535)))
-        (%zm-op! 4 10 "restore_undo" #t #f #f (%zm-store1 (fn (_ x) 0)))
+        (%zm-op! 4 9 "save_undo" #t #f #f
+          (fn (_ ops st br tx next) (fn (_) (zm-var-set! st (zm-save-undo next st)) next)))
+        (%zm-op! 4 10 "restore_undo" #t #f #f
+          (fn (_ ops st br tx next)
+            (fn (_) (def pc (zm-restore-undo)) (if (null? pc) (do (zm-var-set! st 0) next) pc))))
         (%zm-op! 4 11 "print_unicode" #f #f #f (%zm-do1 zm-out-unicode))
         (%zm-op! 4 12 "check_unicode" #t #f #f (%zm-store1 (fn (_ c) (if (zm< c 128) 3 1))))
         (%zm-op! 4 13 "set_true_colour" #f #f #f (%zm-do2 (fn (_ f b) ())))))

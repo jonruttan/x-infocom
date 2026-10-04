@@ -1,0 +1,5 @@
+take lantern
+examine it
+turn it on
+south
+inventory
