@@ -1,0 +1,5 @@
+# The oracle: Debian's frotz package, whose dfrotz plays a story on plain
+# standard input and output.  Built by tools/oracle.sh on first use.
+FROM debian:stable-slim
+RUN apt-get update && apt-get install -y --no-install-recommends frotz \
+	&& rm -rf /var/lib/apt/lists/*

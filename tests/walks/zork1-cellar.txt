@@ -1,0 +1,14 @@
+north
+east
+open window
+west
+examine table
+take sack
+open it
+west
+take lamp
+move rug
+open trap door
+turn on lamp
+down
+score
