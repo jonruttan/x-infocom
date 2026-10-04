@@ -39,6 +39,7 @@
     (zm-cpu-reset!)
     (zm-ops-install!)
     (zm-seed! 1)
+    (zm-screen-start!)
     zm-hdr-pc))
 
 (def zm-run
@@ -51,7 +52,7 @@
     (zm-input-script! lines)
     (def pc (zm-start! path))
     (zm-run pc)
-    (zm-flush)
+    (zm-screen-end!)
     ()))
 
 (def zm-restart!
@@ -60,12 +61,14 @@
     (zm-reset-memory!)
     (zm-cpu-reset!)
     (zm-text-reset!)
+    (zm-screen-start!)
     zm-hdr-pc))
 
 
 ; sread (versions 1 to 4): text from byte 1, ended by a zero byte.
 (def zm-sread
   (fn (_ t p)
+    (zm-status!)
     (def line (zm-read-line (zm- (zm-rb t) 1)))
     (if (null? line) #f
       (do

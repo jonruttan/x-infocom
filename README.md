@@ -3,10 +3,14 @@
 An Infocom Z-machine on x-lang: an interpreter for story files, and the
 tools around one, as a lang bundle.
 
-    x -l infocom -- zork1.z3
+    x -l infocom -- [--plain] zork1.z3
 
-plays a story on the terminal, reading commands from standard input and
-writing at 80 columns, wrapped at word boundaries.
+plays a story, reading commands from standard input.  On a terminal the
+screen is drawn with ANSI sequences at the window's size: the status line
+(before version 4) and the upper window held above a scroll region, text
+styles as reverse, bold and italic.  Through a pipe, under `TERM=dumb` or
+with `--plain`, it prints lines instead -- the lower window only, wrapped
+at 80 columns -- which is what transcripts and the specs use.
 
 ## The machine
 
@@ -30,10 +34,10 @@ The file name is asked for as dfrotz asks it, offering the last name given.
 
 Not served yet:
 
-- the status line and the upper window (output to either is not drawn);
 - undo (`save_undo` reports it unavailable), and the auxiliary saves of a
   table;
-- sound, fonts, colours and text styles;
+- sound, fonts and colours; on the plain screen, the upper window and text
+  styles (output to the upper window is not printed);
 - the timed and terminating-character forms of input.
 
 ## Tools
