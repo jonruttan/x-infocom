@@ -13,7 +13,8 @@
 # Usage: mkspec.sh STORY COMMANDS "case heading"
 #
 # STORY is a file under tests/stories; COMMANDS holds one command a line,
-# none containing a double quote or a backslash.
+# none containing a double quote or a backslash.  MKSPEC_PRELUDE, when set,
+# is x placed before the zm-play call; ORACLE_DIR is passed to oracle.sh.
 set -e
 
 story="$1"
@@ -31,6 +32,7 @@ if grep -q '["\\]' "$cmds"; then
 fi
 
 printf '### %s\n\n```infocom\n' "$title"
+[ -z "$MKSPEC_PRELUDE" ] || printf '%s\n' "$MKSPEC_PRELUDE"
 printf '(zm-play (zm-story "%s")\n  (list' "$(basename "$story")"
 awk '{ printf "\n    \"%s\"", $0 }' "$cmds"
 printf '))\n```\n---\n```output\n'

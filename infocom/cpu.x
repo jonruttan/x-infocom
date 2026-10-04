@@ -26,6 +26,7 @@
 (def %zm-locals ())
 (def %zm-frames ())
 (def zm-argc 0)
+(def %zm-nlocals 0)
 
 (def zm-cpu-reset!
   (fn (_)
@@ -34,7 +35,8 @@
     (set! %zm-base 0)
     (set! %zm-locals (%zm-new-locals))
     (set! %zm-frames ())
-    (set! zm-argc 0)))
+    (set! zm-argc 0)
+    (set! %zm-nlocals 0)))
 
 ; Locals: always 15 slots, so a stray local number reads 0, not past the end.
 (def %zm-new-locals
@@ -99,7 +101,8 @@
       (do
         (def a (zm-unpack paddr))
         (def n (zm-rb a))
-        (set! %zm-frames (pair (list next store %zm-locals %zm-base zm-argc) %zm-frames))
+        (set! %zm-frames
+          (pair (list next store %zm-locals %zm-base zm-argc %zm-nlocals) %zm-frames))
         (def locals (%zm-new-locals))
         (if (zm< zm-version 5)
           (do
@@ -115,24 +118,32 @@
               (do (%zm-obj-set! locals i (first as)) (self (zm+ i 1) (rest as))))))
         (fill 1 args)
         (set! %zm-locals locals)
+        (set! %zm-nlocals n)
         (set! %zm-base %zm-sp)
         (set! zm-argc (%zm-length args))
         (if (zm< zm-version 5) (zm+ (zm+ a 1) (zm<< n 1)) (zm+ a 1))))))
+
+; Drop the running routine's frame and stack, putting its caller back;
+; answers (return-pc . store).
+(def %zm-pop-frame!
+  (fn (_)
+    (def f (first %zm-frames))
+    (set! %zm-frames (rest %zm-frames))
+    (set! %zm-sp %zm-base)
+    (def r (rest (rest f)))
+    (set! %zm-locals (first r))
+    (set! %zm-base (first (rest r)))
+    (set! zm-argc (first (rest (rest r))))
+    (set! %zm-nlocals (first (rest (rest (rest r)))))
+    (pair (first f) (first (rest f)))))
 
 ; Return v from the running routine: answers the caller's pc.
 (def zm-return
   (fn (_ v)
     (if (null? %zm-frames) (Err raise (lit infocom) "return from the main routine" v))
-    (def f (first %zm-frames))
-    (set! %zm-frames (rest %zm-frames))
-    (set! %zm-sp %zm-base)
-    (def r (rest f))
-    (def store (first r))
-    (set! %zm-locals (first (rest r)))
-    (set! %zm-base (first (rest (rest r))))
-    (set! zm-argc (first (rest (rest (rest r)))))
-    (if (zm< store 0) () (zm-var-set! store v))
-    (first f)))
+    (def back (%zm-pop-frame!))
+    (if (zm< (rest back) 0) () (zm-var-set! (rest back) v))
+    (first back)))
 
 ; catch answers the current frame's identity; throw returns from it.
 (def zm-frame-id (fn (_) (%zm-length %zm-frames)))
@@ -140,16 +151,7 @@
   (fn (_ v id)
     (def unwind
       (fn (self)
-        (if (zm< id (%zm-length %zm-frames))
-          (do
-            (def f (first %zm-frames))
-            (set! %zm-frames (rest %zm-frames))
-            (set! %zm-sp %zm-base)
-            (def r (rest f))
-            (set! %zm-locals (first (rest r)))
-            (set! %zm-base (first (rest (rest r))))
-            (set! zm-argc (first (rest (rest (rest r)))))
-            (self)))))
+        (if (zm< id (%zm-length %zm-frames)) (do (%zm-pop-frame!) (self)))))
     (unwind)
     (zm-return v)))
 

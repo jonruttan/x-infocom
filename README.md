@@ -11,9 +11,11 @@ writing at 80 columns, wrapped at word boundaries.
 ## The machine
 
 Story files of versions 3, 4, 5 and 8 load; versions 1, 2, 6 and 7 are
-refused at the start.  Version 3, the format of most Infocom games, is the
-one exercised: Zork I runs from its opening through the house and into the
-cellar with output identical to dfrotz's.
+refused at the start.  Zork I (version 3) runs from its opening through
+the house and into the cellar with output identical to dfrotz's.  Two
+version-5 conformance stories pass: CZECH, all 406 of its checks, with a
+transcript identical to its own reference outside the interpreter's
+identity in the header; and Praxix, every test.
 
 An instruction is read once.  The parser turns it into a record, and the
 record into a closure that does the operation and answers the next
@@ -22,12 +24,16 @@ vector over the story, so a loop never decodes its body twice.  Strings in
 static memory are decoded once and kept the same way.  The run loop is one
 tail call an instruction.
 
+Saving and restoring use Quetzal, the format interpreters share: a save
+from this machine restores in dfrotz, and one from dfrotz restores here.
+The file name is asked for as dfrotz asks it, offering the last name given.
+
 Not served yet:
 
-- saving and restoring (`save` and `restore` report failure, which every
-  story handles);
 - the status line and the upper window (output to either is not drawn);
-- undo, sound, fonts, colours and text styles;
+- undo (`save_undo` reports it unavailable), and the auxiliary saves of a
+  table;
+- sound, fonts, colours and text styles;
 - the timed and terminating-character forms of input.
 
 ## Tools
@@ -53,7 +59,10 @@ in `tests/walks`.
 
 `tests/stories/zork1.z3` is Zork I, release 119, from
 [historicalsource/zork1](https://github.com/historicalsource/zork1), under
-the MIT licence in `tests/stories/LICENSE.zork1`.
+the MIT licence in `tests/stories/LICENSE.zork1`.  `czech.z5` is CZECH 0.8 (Amir
+Karger; licence in `tests/stories/README.czech`) and `praxix.z5` is Praxix
+(Zarf and Dannii, public domain; `tests/stories/README.praxix`), both from
+the IF Archive.  `tests/saves` holds a save dfrotz wrote, restored by a spec.
 
 ## Licence
 

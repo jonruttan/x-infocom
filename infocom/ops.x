@@ -239,17 +239,23 @@
     (%zm-op! 0 4 "nop" #f #f #f (%zm-do0 (fn (_) ())))
     (if (zm< v 4)
       (do
+        ; the branch data follows the one opcode byte
         (%zm-op! 0 5 "save" #f #t #f
-          (fn (_ ops st br tx next) (fn (_) (%zm-br (zm-save) br next))))
+          (fn (_ ops st br tx next)
+            (def at (zm+ %zm-building-pc 1))
+            (fn (_) (%zm-br (zm-save at) br next))))
         (%zm-op! 0 6 "restore" #f #t #f
-          (fn (_ ops st br tx next) (fn (_) (if (zm-restore) zm-restored-pc (%zm-br #f br next))))))
+          (fn (_ ops st br tx next)
+            (fn (_) (def pc (zm-restore)) (if (null? pc) (%zm-br #f br next) pc)))))
       (if (zm< v 5)
         (do
           (%zm-op! 0 5 "save" #t #f #f
-            (fn (_ ops st br tx next) (fn (_) (zm-var-set! st (if (zm-save) 1 0)) next)))
+            (fn (_ ops st br tx next)
+              (def at (zm- next 1))
+              (fn (_) (zm-var-set! st (if (zm-save at) 1 0)) next)))
           (%zm-op! 0 6 "restore" #t #f #f
             (fn (_ ops st br tx next)
-              (fn (_) (if (zm-restore) zm-restored-pc (do (zm-var-set! st 0) next))))))))
+              (fn (_) (def pc (zm-restore)) (if (null? pc) (do (zm-var-set! st 0) next) pc)))))))
     (%zm-op! 0 7 "restart" #f #f #f (fn (_ ops st br tx next) (fn (_) (zm-restart!))))
     (%zm-op! 0 8 "ret_popped" #f #f #f (fn (_ ops st br tx next) (fn (_) (zm-return (zm-pop)))))
     (if (zm< v 5)
@@ -372,12 +378,19 @@
               next)))
         (%zm-op! 3 31 "check_arg_count" #f #t #f (%zm-branch1 (fn (_ n) (zm< (zm- n 1) zm-argc))))
 
-        ; EXT
+        ; EXT.  save and restore with operands are the auxiliary forms on a
+        ; table, not served: they report failure.
         (%zm-op! 4 0 "save" #t #f #f
-          (fn (_ ops st br tx next) (fn (_) (zm-var-set! st (if (zm-save) 1 0)) next)))
+          (fn (_ ops st br tx next)
+            (def at (zm- next 1))
+            (if (null? ops)
+              (fn (_) (zm-var-set! st (if (zm-save at) 1 0)) next)
+              (fn (_) (zm-var-set! st 0) next))))
         (%zm-op! 4 1 "restore" #t #f #f
           (fn (_ ops st br tx next)
-            (fn (_) (if (zm-restore) zm-restored-pc (do (zm-var-set! st 0) next)))))
+            (if (null? ops)
+              (fn (_) (def pc (zm-restore)) (if (null? pc) (do (zm-var-set! st 0) next) pc))
+              (fn (_) (zm-var-set! st 0) next))))
         (%zm-op! 4 2 "log_shift" #t #f #f
           (%zm-store2
             (fn (_ x p)
@@ -392,5 +405,6 @@
         (%zm-op! 4 9 "save_undo" #t #f #f (%zm-store1 (fn (_ x) 65535)))
         (%zm-op! 4 10 "restore_undo" #t #f #f (%zm-store1 (fn (_ x) 0)))
         (%zm-op! 4 11 "print_unicode" #f #f #f (%zm-do1 zm-out-unicode))
-        (%zm-op! 4 12 "check_unicode" #t #f #f (%zm-store1 (fn (_ c) (if (zm< c 128) 3 1))))))
+        (%zm-op! 4 12 "check_unicode" #t #f #f (%zm-store1 (fn (_ c) (if (zm< c 128) 3 1))))
+        (%zm-op! 4 13 "set_true_colour" #f #f #f (%zm-do2 (fn (_ f b) ())))))
     v))

@@ -1,0 +1,8 @@
+open mailbox
+save
+x-infocom-zork1.qzl
+take leaflet
+restore
+x-infocom-zork1.qzl
+look
+inventory

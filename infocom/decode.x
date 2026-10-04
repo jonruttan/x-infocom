@@ -139,8 +139,14 @@
           (do (def g (%zm-global-addr v)) (fn (_) (zm-rw g)))))
       (fn (_) v))))
 
+; The address of the instruction being built, for the one builder that
+; needs its own address rather than the next: a save records where its
+; branch data is.
+(def %zm-building-pc 0)
+
 (def %zm-build
   (fn (_ pc)
+    (set! %zm-building-pc pc)
     (def ins (zm-parse pc))
     (def kind (first ins))
     (def r (rest (rest ins)))

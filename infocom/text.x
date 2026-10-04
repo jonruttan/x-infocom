@@ -290,11 +290,13 @@
     (zm-wb! (zm+ (zm+ (first top) 2) n) (if (zm= c 10) 13 c))
     (set! %zm-stream3 (pair (pair (first top) (zm+ n 1)) (rest %zm-stream3)))))
 
+; ZSCII 0 is no character at all, in any stream.
 (def zm-out-zscii
   (fn (_ c)
-    (if (null? %zm-stream3)
-      (if %zm-stream1 (%zm-screen-zscii c))
-      (%zm-s3-zscii c))))
+    (if (zm= c 0) ()
+      (if (null? %zm-stream3)
+        (if %zm-stream1 (%zm-screen-zscii c))
+        (%zm-s3-zscii c)))))
 
 (def zm-out-codes
   (fn (self cs)

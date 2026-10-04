@@ -31,17 +31,39 @@ image=x-infocom-oracle
 podman image exists "$image" ||
 	podman build -q -t "$image" -f "$(dirname "$0")/Containerfile.oracle" "$(dirname "$0")" >/dev/null
 
-dir="$(cd "$(dirname "$story")" && pwd)"
+# The story runs from a scratch directory of its own, writable, so a save
+# has somewhere to go; ORACLE_DIR names one to keep (and to seed with save
+# files to restore).
+work="${ORACLE_DIR:-$(mktemp -d)}"
+cp "$story" "$work/"
 name="$(basename "$story")"
 
-podman run --rm -i -v "$dir:/s:ro" "$image" \
+podman run --rm -i -v "$work:/s" -w /s "$image" \
 	/usr/games/dfrotz -m -w "${ORACLE_WIDTH:-80}" -s "$seed" "/s/$name" < "$cmds" 2>/dev/null |
 awk -v cmds="$cmds" '
 	BEGIN { n = 0; while ((getline line < cmds) > 0) c[++n] = line; k = 0 }
+	# dfrotz reads a file name on the line it asks on, and shows nothing of
+	# what was typed: put the name there, and what follows on a line of its own.
+	function emit(s,   p, rest) {
+		p = index(s, "Please enter a filename [")
+		if (p == 0) { sub(/ +$/, "", s); if (s != "" || !drop) print s; return }
+		p = index(s, "]: ")
+		k++
+		print substr(s, 1, p + 2) c[k]
+		rest = substr(s, p + 3)
+		sub(/ +$/, "", rest)
+		if (rest != "") print rest
+	}
 	NR <= 2 { next }
 	skip { skip = 0; if ($0 == "") next }
 	/Score: -?[0-9]+ +Moves: [0-9]+ *$/ {
-		if (substr($0, 1, 1) == ">") { k++; print ">" c[k] }
+		s = $0
+		if (substr(s, 1, 1) == ">") { k++; print ">" c[k]; s = substr(s, 2) }
+		# a file name read on a prompt line, the status drawn after it
+		if (index(s, "Please enter a filename [") == 1) {
+			k++
+			print substr(s, 1, index(s, "]: ") + 2) c[k]
+		}
 		skip = 1
 		next
 	}
@@ -50,10 +72,11 @@ awk -v cmds="$cmds" '
 	/^>/ && k < n {
 		k++
 		print ">" c[k]
-		rest = substr($0, 2)
-		sub(/ +$/, "", rest)
-		if (rest != "") print rest
+		drop = 1
+		emit(substr($0, 2))
+		drop = 0
 		next
 	}
-	{ sub(/ +$/, ""); print }
+	{ emit($0) }
 '
+[ -n "$ORACLE_DIR" ] || rm -rf "$work"

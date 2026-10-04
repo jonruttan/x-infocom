@@ -13,7 +13,7 @@
 ; would show it.
 
 (provide infocom/input
-  zm-input-fd! zm-input-script! zm-read-line zm-tokenise! zm-lookup)
+  zm-input-fd! zm-input-script! zm-read-line zm-read-raw-line zm-tokenise! zm-lookup)
 
 (def %zm-source ())
 (def %zm-echo? #f)
@@ -77,6 +77,16 @@
             (if (if (null? cs) #t (zm= n 0)) ()
               (pair (%zm-lower (first cs)) (self (rest cs) (zm- n 1))))))
         (pair #t (cut (rest line) max))))))
+
+; The next line as typed, for a file name: (#t . codes), or ().
+(def zm-read-raw-line
+  (fn (_)
+    (zm-flush)
+    (def line (%zm-source))
+    (if (null? line) ()
+      (do
+        (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
+        line))))
 
 (def %zm-lower
   (fn (_ c) (if (if (zm< c 65) #f (zm< c 91)) (zm+ c 32) c)))
