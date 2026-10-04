@@ -12,7 +12,7 @@
 
 (provide infocom/machine
   zm-start! zm-run zm-play zm-restart!
-  zm-sread zm-aread zm-read-char zm-scan-table zm-encode-text!
+  zm-sread zm-aread zm-scan-table zm-encode-text!
   zm-copy-table! zm-print-table)
 
 ; The story's file name without its directory or extension: the stem a
@@ -94,11 +94,6 @@
         (if (zm= p 0) () (zm-tokenise! t p 0 #f))
         #t))))
 
-; read_char: the first character of the next line; an empty line is Return.
-(def zm-read-char
-  (fn (_)
-    (def line (zm-read-line 1))
-    (if (null? line) () (if (null? (rest line)) 13 (first (rest line))))))
 
 (def zm-scan-table
   (fn (_ x t n form)

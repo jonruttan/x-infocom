@@ -23,7 +23,7 @@
 ; then finishes the save instruction as a success: before version 4 by
 ; taking its branch, after it by storing 2.
 
-(provide infocom/quetzal zm-save zm-restore zm-save-dir!)
+(provide infocom/quetzal zm-save zm-restore zm-restore-file zm-save-dir!)
 
 (def %zm-save-dir "")
 (def zm-save-dir! (fn (_ dir) (set! %zm-save-dir dir)))
@@ -293,7 +293,13 @@
 (def zm-restore
   (fn (_)
     (def path (%qz-ask-file))
-    (if (if (null? path) #t (not (%qz-load path))) ()
+    (if (null? path) () (zm-restore-file path))))
+
+; Restore from the file at path, asking nothing: the restore that begins a
+; game from the command line.  Answers the pc to go on from, or ().
+(def zm-restore-file
+  (fn (_ path)
+    (if (not (%qz-load path)) ()
       (if (if (zm< %qz-size 12) #t (not (if (%qz-id? 0 "FORM") (%qz-id? 8 "IFZS") #f))) ()
         (do
           (def cs (%qz-chunks))

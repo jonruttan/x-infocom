@@ -12,8 +12,11 @@
 ; a spec hands over a list of strings and echoes each one, as a transcript
 ; would show it.
 
+(import x/repl/term)
+
 (provide infocom/input
-  zm-input-fd! zm-input-script! zm-read-line zm-read-raw-line zm-tokenise! zm-lookup)
+  zm-input-fd! zm-input-script! zm-read-line zm-read-raw-line zm-read-char
+  zm-echo! zm-tokenise! zm-lookup)
 
 (def %zm-source ())
 (def %zm-echo? #f)
@@ -22,6 +25,7 @@
 (def zm-input-fd!
   (fn (_ fd)
     (set! %zm-echo? #f)
+    (set! %zm-key-fd (if (Term tty? fd) fd ()))
     (set! %zm-ibuf (%zm-str-make 1))
     (set! %zm-source
       (fn (_)
@@ -195,3 +199,52 @@
                 (zm-wb! (zm+ e 3) (first w))))
             (self (rest ws) (zm+ k 1))))))
     (zm-wb! (zm+ p 1) (go words 0))))
+
+; --- single keys -------------------------------------------------------------
+; read_char on a terminal takes one key, with the terminal raw for just that
+; read; anywhere else it takes the next line's first character.
+
+(def %zm-key-fd ())
+(def zm-echo! (fn (_ on) (set! %zm-echo? on)))
+
+; A key as Term decodes it, in ZSCII: Return 13, Delete 8, Escape 27, the
+; arrows 129-132; text, its first byte.
+(def %zm-key-zscii
+  (fn (_ k)
+    (match
+      ((null? k) ())
+      ((str? k) (if (zm= (%zm-byte-len k) 0) 13 (%zm-char->int (%zm-byte-ref k 0))))
+      ((eq? k (lit enter)) 13)
+      ((eq? k (lit backspace)) 8)
+      ((eq? k (lit delete)) 8)
+      ((eq? k (lit escape)) 27)
+      ((eq? k (lit up)) 129)
+      ((eq? k (lit down)) 130)
+      ((eq? k (lit left)) 131)
+      ((eq? k (lit right)) 132)
+      ((eq? k (lit tab)) 9)
+      ((eq? k (lit eof)) ())
+      ((eq? k (lit interrupt)) ())
+      (#t 27))))
+
+; One key from the terminal: its ZSCII, or () when input has ended.
+(def %zm-read-key
+  (fn (_ fd)
+    (zm-flush)
+    (def saved (Term raw-with-signals! fd))
+    (def byte
+      (fn (_)
+        (def n (zm-file-read fd %zm-ibuf 1))
+        (if (zm< n 1) () (zm& (%zm-pref (%zm-str->ptr %zm-ibuf) 0 1) 255))))
+    (def k (Term key byte))
+    (Term restore! fd saved)
+    (%zm-key-zscii k)))
+
+; read_char's character, or () at end of input.
+(def zm-read-char
+  (fn (_)
+    (if (null? %zm-key-fd)
+      (do
+        (def line (zm-read-line 1))
+        (if (null? line) () (if (null? (rest line)) 13 (first (rest line)))))
+      (%zm-read-key %zm-key-fd))))

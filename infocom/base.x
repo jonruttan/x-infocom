@@ -27,4 +27,5 @@
 (import infocom/screen)
 (import infocom/machine)
 (import infocom/dis)
+(import infocom/info)
 (import infocom/cli)
