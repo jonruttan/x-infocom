@@ -16,7 +16,8 @@
 ; global.  -> names the store; ? a branch taken when the test holds, ?~
 ; when it fails, to an address or rtrue/rfalse.  Text is shown quoted.
 
-(provide infocom/dis zm-dis zm-dis-at zm-dis-routine zm-trace-run)
+(provide infocom/dis zm-dis zm-dis-at zm-dis-code zm-dis-routine zm-dis-routine-at
+  zm-trace-run)
 
 (def %zm-hex-digit (fn (_ d) (if (zm< d 10) (zm+ d 48) (zm+ d 87))))
 
@@ -82,19 +83,10 @@
     (go pc 0)
     (zm-flush)))
 
-; The routine at packed address p, until its last instruction: one that
-; returns, jumps or quits, past every branch target seen so far.
-(def zm-dis-routine
-  (fn (_ p)
-    (def a (zm-unpack p))
-    (def n (zm-rb a))
-    (%zm-puts "routine ")
-    (%zm-put (%zm-hex a 4))
-    (%zm-puts ", ")
-    (zm-out-num n)
-    (%zm-puts " locals")
-    (zm-out-zscii 13)
-    (def start (if (zm< zm-version 5) (zm+ (zm+ a 1) (zm<< n 1)) (zm+ a 1)))
+; Code from start until its last instruction: one that returns, jumps or
+; quits, past every branch and jump target seen so far.
+(def zm-dis-code
+  (fn (_ start)
     (def go
       (fn (self pc far)
         (def ins (zm-parse pc))
@@ -102,11 +94,13 @@
         (def op (first (rest ins)))
         (def br (first (rest (rest (rest (rest ins))))))
         (def far2 (if (null? br) far (if (zm< far (rest br)) (rest br) far)))
+        (def ops (first (rest (rest ins))))
+        (def o1 (if (null? ops) (pair 2 0) (first ops)))
         (def far3
-          (if (if (zm= kind 1) (zm= op 12) #f)
+          (if (if (zm= kind 1) (if (zm= op 12) (not (zm= (first o1) 2)) #f) #f)
             (do
               (def t (zm- (zm+ (first (rest (rest (rest (rest (rest (rest ins)))))))
-                              (zm-signed (rest (first (first (rest (rest ins)))))))
+                              (zm-signed (rest o1)))
                           2))
               (if (zm< far2 t) t far2))
             far2))
@@ -119,6 +113,21 @@
         (if (if ends? (zm< far3 next) #f) () (self next far3))))
     (go start 0)
     (zm-flush)))
+
+; The routine at byte address a: its header, then its code.
+(def zm-dis-routine-at
+  (fn (_ a)
+    (def n (zm-rb a))
+    (%zm-puts "routine ")
+    (%zm-put (%zm-hex a 4))
+    (%zm-puts ", ")
+    (zm-out-num n)
+    (%zm-puts " locals")
+    (zm-out-zscii 13)
+    (zm-dis-code (if (zm< zm-version 5) (zm+ (zm+ a 1) (zm<< n 1)) (zm+ a 1)))))
+
+; The routine at packed address p.
+(def zm-dis-routine (fn (_ p) (zm-dis-routine-at (zm-unpack p))))
 
 ; Run with every instruction printed before it runs: the pc and the
 ; instruction, as zm-dis prints it, for the first limit instructions.

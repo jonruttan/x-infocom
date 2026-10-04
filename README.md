@@ -40,11 +40,45 @@ Not served yet:
   styles (output to the upper window is not printed);
 - the timed and terminating-character forms of input.
 
+## The command line
+
+    x -l infocom -- [OPTIONS] STORY
+
+`--help` prints the options; they are declared once, in `infocom/cli.x`,
+and that declaration is both the help text and the parser.
+
+Play:
+
+| option | |
+|---|---|
+| `-p`, `--plain` | print lines, not a drawn screen |
+| `-w`, `--width N` | wrap printed lines at N columns (0: never) |
+| `-s`, `--seed N` | seed the random numbers, for play that repeats (else the clock) |
+| `-r`, `--restore FILE` | begin from a saved game |
+| `-S`, `--save-dir DIR` | put save files in DIR |
+| `-e`, `--echo` | echo each command read, as a transcript shows it |
+
+Describe the story, then stop (in the spirit of infodump and txd):
+
+| option | |
+|---|---|
+| `-i`, `--info` | the header: version, release, serial, checksum, the memory map |
+| `-o`, `--objects` | the objects, their attributes and properties |
+| `-t`, `--tree` | the object tree |
+| `-d`, `--dict` | the dictionary |
+| `-a`, `--abbrevs` | the abbreviations |
+| `-D`, `--dis ADDR` | disassemble the routine at byte ADDR (hex; 0, the start) |
+
+On a terminal, `read_char` takes a single key (the arrows as ZSCII
+129-132); elsewhere it takes the next line's first character.
+
 ## Tools
 
-- `zm-dis`, `zm-dis-routine` and `zm-trace-run` (infocom/dis.x): a
-  disassembler in the style of txd, over the parser the machine runs on,
-  and a run that prints each instruction before it runs.
+- `zm-dis`, `zm-dis-code`, `zm-dis-routine` and `zm-trace-run`
+  (infocom/dis.x): a disassembler in the style of txd, over the parser the
+  machine runs on, and a run that prints each instruction before it runs.
+- `zm-info-header`, `-objects`, `-tree`, `-dict` and `-abbrevs`
+  (infocom/info.x): the views behind the describing options.
 - `tools/oracle.sh STORY COMMANDS`: the transcript dfrotz prints for a story
   and its commands, in the form the interpreter's script mode prints it.
   dfrotz runs in a Podman container built from `tools/Containerfile.oracle`.

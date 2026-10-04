@@ -38,3 +38,20 @@
     (List for-each
       (fn (_ l) (if (hit? l needles) (do (display l) (newline))))
       (Str8 split "\n" (File read-all file)))))
+
+; The first n lines a thunk prints through the machine's output, shown: for
+; views too long to hold whole in a spec.
+(def zm-first-lines
+  (fn (_ n thunk)
+    (def file "/tmp/x-infocom-lines.out")
+    (def fd (File open file (list (lit wronly) (lit creat) (lit trunc)) 420))
+    (zm-output-fd! fd)
+    (thunk)
+    (zm-flush)
+    (zm-output-fd! 1)
+    (File close fd)
+    (def go
+      (fn (self ls k)
+        (if (if (null? ls) #t (zm= k n)) ()
+          (do (display (first ls)) (newline) (self (rest ls) (zm+ k 1))))))
+    (go (Str8 split "\n" (File read-all file)) 0)))
