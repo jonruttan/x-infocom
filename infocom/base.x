@@ -24,6 +24,7 @@
 (import infocom/decode)
 (import infocom/ops)
 (import infocom/quetzal)
+(import infocom/screen)
 (import infocom/machine)
 (import infocom/dis)
 (import infocom/cli)

@@ -76,19 +76,23 @@
     (%zm-header-set!)
     zm-version))
 
-; What the interpreter says about itself in the header.  A plain-text
-; screen: no status-line hiding, no split screen, no styles or colours, an
-; unbounded height and an 80-column width.
+; What the interpreter says about itself in the header, by screen.  The
+; plain screen: no status line or split, no styles, an unbounded height.
+; The terminal: the status line and a split (before version 4); bold,
+; italic and fixed pitch (from 4); the window's own size.
 (def %zm-header-set!
   (fn (_)
+    (def width (if (zm< 0 %zm-width) %zm-width 80))
+    (def height (if zm-ansi? %zm-rows 255))
     (if (zm< zm-version 4)
-      (zm-wb! 1 (zm& (zm-rb 1) (zm^ 65535 (zm| 16 (zm| 32 64)))))
+      (zm-wb! 1 (zm| (zm& (zm-rb 1) (zm^ 255 (zm| 16 (zm| 32 64))))
+                     (if zm-ansi? 32 0)))
       (do
-        (zm-wb! 1 0)
-        (zm-wb! 32 255)
-        (zm-wb! 33 80)
+        (zm-wb! 1 (if zm-ansi? 28 0))
+        (zm-wb! 32 height)
+        (zm-wb! 33 width)
         (if (zm< zm-version 5) ()
-          (do (zm-ww! 34 80) (zm-ww! 36 255) (zm-wb! 38 1) (zm-wb! 39 1)
+          (do (zm-ww! 34 width) (zm-ww! 36 height) (zm-wb! 38 1) (zm-wb! 39 1)
             ; the default colours: "default", there being no others
             (zm-wb! 44 1) (zm-wb! 45 1)))))
     ; flags 2: no pictures, undo, mouse, colours or sound

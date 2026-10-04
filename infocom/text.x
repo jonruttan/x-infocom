@@ -290,12 +290,14 @@
     (zm-wb! (zm+ (zm+ (first top) 2) n) (if (zm= c 10) 13 c))
     (set! %zm-stream3 (pair (pair (first top) (zm+ n 1)) (rest %zm-stream3)))))
 
-; ZSCII 0 is no character at all, in any stream.
+; ZSCII 0 is no character at all, in any stream.  The screen's upper
+; window is screen.x's to draw.
 (def zm-out-zscii
   (fn (_ c)
     (if (zm= c 0) ()
       (if (null? %zm-stream3)
-        (if %zm-stream1 (%zm-screen-zscii c))
+        (if %zm-stream1
+          (if (zm= zm-window 0) (%zm-screen-zscii c) (zm-upper-zscii c)))
         (%zm-s3-zscii c)))))
 
 (def zm-out-codes
