@@ -15,8 +15,9 @@ at 80 columns -- which is what transcripts and the specs use.
 ## The machine
 
 Story files of versions 3, 4, 5 and 8 load; versions 1, 2, 6 and 7 are
-refused at the start.  Zork I (version 3) runs from its opening through
-the house and into the cellar with output identical to dfrotz's.  Two
+refused at the start.  Zork I, II and III (version 3) run with output
+identical to dfrotz's: Zork I from its opening through the house and into
+the cellar, II and III through their first rooms.  Two
 version-5 conformance stories pass: CZECH, all 406 of its checks, with a
 transcript identical to its own reference outside the interpreter's
 identity in the header; and Praxix, every test.
@@ -31,11 +32,12 @@ tail call an instruction.
 Saving and restoring use Quetzal, the format interpreters share: a save
 from this machine restores in dfrotz, and one from dfrotz restores here.
 The file name is asked for as dfrotz asks it, offering the last name given.
+Undo keeps eight levels: save_undo keeps dynamic memory (one block copy),
+the stack and the frames, and restore_undo puts the newest back.
 
 Not served yet:
 
-- undo (`save_undo` reports it unavailable), and the auxiliary saves of a
-  table;
+- the auxiliary saves and restores of a table;
 - sound, fonts and colours; on the plain screen, the upper window and text
   styles (output to the upper window is not printed);
 - the timed and terminating-character forms of input.
@@ -95,9 +97,12 @@ plays a story on a list of commands with `zm-play`, which echoes each
 command after its prompt as a transcript shows it.  The command lists live
 in `tests/walks`.
 
-`tests/stories/zork1.z3` is Zork I, release 119, from
-[historicalsource/zork1](https://github.com/historicalsource/zork1), under
-the MIT licence in `tests/stories/LICENSE.zork1`.  `czech.z5` is CZECH 0.8 (Amir
+`tests/stories/zork1.z3`, `zork2.z3` and `zork3.z3` are Zork I (release
+119), II (63) and III (25), from historicalsource
+([zork1](https://github.com/historicalsource/zork1),
+[zork2](https://github.com/historicalsource/zork2),
+[zork3](https://github.com/historicalsource/zork3)), under the MIT licences
+in `tests/stories/LICENSE.zork*`.  `czech.z5` is CZECH 0.8 (Amir
 Karger; licence in `tests/stories/README.czech`) and `praxix.z5` is Praxix
 (Zarf and Dannii, public domain; `tests/stories/README.praxix`), both from
 the IF Archive.  `tests/saves` holds a save dfrotz wrote, restored by a spec.

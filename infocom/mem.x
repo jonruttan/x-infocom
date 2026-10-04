@@ -95,8 +95,8 @@
           (do (zm-ww! 34 width) (zm-ww! 36 height) (zm-wb! 38 1) (zm-wb! 39 1)
             ; the default colours: "default", there being no others
             (zm-wb! 44 1) (zm-wb! 45 1)))))
-    ; flags 2: no pictures, undo, mouse, colours or sound
-    (zm-wb! 17 (zm& (zm-rb 17) 7))
+    ; flags 2: undo if the game asks; no pictures, mouse, colours or sound
+    (zm-wb! 17 (zm& (zm-rb 17) 23))
     (zm-wb! 30 6)
     (zm-wb! 31 73)
     (zm-wb! 50 1)
@@ -107,11 +107,7 @@
 (def zm-reset-memory!
   (fn (_)
     (def keep (zm& (zm-rb 17) 3))
-    (def go
-      (fn (self a)
-        (if (zm< a zm-hdr-static)
-          (do (zm-wb! a (%zm-orig-rb a)) (self (zm+ a 1))))))
-    (go 0)
+    (%zm-mem-copy %zm-ptr %zm-orig-ptr zm-hdr-static)
     (%zm-header-set!)
     (zm-wb! 17 (zm| (zm& (zm-rb 17) 252) keep))))
 

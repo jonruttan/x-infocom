@@ -1,0 +1,6 @@
+take sword
+take lantern
+turn on lantern
+inventory
+south
+examine sword
