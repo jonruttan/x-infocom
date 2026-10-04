@@ -8,21 +8,32 @@
 ; @license MIT No Attribution (MIT-0)
 ;
 ; The loop is one tail call an instruction: fetch the closure for pc, run
-; it, take the pc it answers.  Saving and restoring are not served yet;
-; both report failure, which every story handles.
+; it, take the pc it answers.
 
 (provide infocom/machine
-  zm-start! zm-run zm-play zm-restart! zm-save zm-restore zm-restored-pc
+  zm-start! zm-run zm-play zm-restart!
   zm-sread zm-aread zm-read-char zm-scan-table zm-encode-text!
   zm-copy-table! zm-print-table)
 
-(def zm-restored-pc 0)
+; The story's file name without its directory or extension: the stem a
+; save file is named for.
+(def %zm-stem
+  (fn (_ path)
+    (def n (%zm-byte-len path))
+    (def c (fn (_ i) (%zm-char->int (%zm-byte-ref path i))))
+    (def slash (fn (self i) (if (zm< i 0) 0 (if (zm= (c i) 47) (zm+ i 1) (self (zm- i 1))))))
+    (def s (slash (zm- n 1)))
+    (def dot (fn (self i) (if (zm< i s) n (if (zm= (c i) 46) i (self (zm- i 1))))))
+    (def e (dot (zm- n 1)))
+    (Str8 sub s (zm- (if (zm= e s) n e) s) path)))
 
 (def zm-start!
   (fn (_ path)
     (zm-load! path)
     (if (if (zm< zm-version 3) #t (if (zm= zm-version 6) #t (zm= zm-version 7)))
       (Err raise (lit infocom) "story version not served" zm-version))
+    (set! %zm-story-name (%zm-stem path))
+    (set! %qz-default ())
     (zm-decode-reset!)
     (zm-text-reset!)
     (zm-cpu-reset!)
@@ -51,8 +62,6 @@
     (zm-text-reset!)
     zm-hdr-pc))
 
-(def zm-save (fn (_) #f))
-(def zm-restore (fn (_) #f))
 
 ; sread (versions 1 to 4): text from byte 1, ended by a zero byte.
 (def zm-sread

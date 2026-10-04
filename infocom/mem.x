@@ -88,7 +88,9 @@
         (zm-wb! 32 255)
         (zm-wb! 33 80)
         (if (zm< zm-version 5) ()
-          (do (zm-ww! 34 80) (zm-ww! 36 255) (zm-wb! 38 1) (zm-wb! 39 1)))))
+          (do (zm-ww! 34 80) (zm-ww! 36 255) (zm-wb! 38 1) (zm-wb! 39 1)
+            ; the default colours: "default", there being no others
+            (zm-wb! 44 1) (zm-wb! 45 1)))))
     ; flags 2: no pictures, undo, mouse, colours or sound
     (zm-wb! 17 (zm& (zm-rb 17) 7))
     (zm-wb! 30 6)

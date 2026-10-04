@@ -1,0 +1,4 @@
+restore
+zork1-north.qzl
+look
+inventory
