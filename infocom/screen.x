@@ -22,7 +22,7 @@
   zm-screen-plain! zm-screen-ansi! zm-screen-start! zm-screen-end!
   zm-ansi? zm-window zm-status! zm-status-codes
   zm-split! zm-set-window! zm-erase-window! zm-erase-line! zm-set-cursor!
-  zm-cursor zm-text-style! zm-upper-zscii)
+  zm-cursor zm-text-style! zm-upper-zscii zm-upper-unicode)
 
 (def zm-ansi? #f)
 (def %zm-esc-visible? #f)
@@ -132,9 +132,14 @@
         (List append (%zm-ascii-codes "Score: ")
           (List append (%zm-num-codes a)
             (List append (%zm-ascii-codes "  Moves: ") (List append (%zm-num-codes b) (list 32)))))
-        (List append (%zm-ascii-codes "Time: ")
-          (List append (%zm-num-codes a)
-            (List append (list 58 (zm+ 48 (zm/ b 10)) (zm+ 48 (zm% b 10))) (list 32))))))
+        ; twelve-hour, as the games' own manuals show it: "Time:  8:00 am"
+        (do
+          (def h (zm% a 24))
+          (def h12 (if (zm= (zm% h 12) 0) 12 (zm% h 12)))
+          (List append (%zm-ascii-codes (if (zm< h12 10) "Time:  " "Time: "))
+            (List append (%zm-num-codes h12)
+              (List append (list 58 (zm+ 48 (zm/ b 10)) (zm+ 48 (zm% b 10)))
+                (%zm-ascii-codes (if (zm< h 12) " am " " pm "))))))))
     (def lw (%zm-length place))
     (def rw (%zm-length right))
     (def gap (zm- width (zm+ lw rw)))
@@ -152,7 +157,7 @@
         (%zm-csi "7")
         (%zm-goto 1 1)
         (%zm-csi "[7m")
-        (def go (fn (self cs) (if (null? cs) () (do (%zm-glyph (first cs)) (self (rest cs))))))
+        (def go (fn (self cs) (if (null? cs) () (do (%zm-status-glyph (first cs)) (self (rest cs))))))
         (go (zm-status-codes %zm-width))
         (%zm-csi "[0m")
         (%zm-csi "8")))))
@@ -237,8 +242,15 @@
       (if (if (zm= c 13) #t (zm= c 10))
         (do (set! %zm-urow (zm+ %zm-urow 1)) (set! %zm-ucol 1) (%zm-upper-goto))
         (do
-          (if (zm< %zm-width %zm-ucol) () (%zm-glyph c))
-          (set! %zm-ucol (zm+ %zm-ucol 1)))))))
+          (def u (%zm-zscii->unicode c))
+          (if (null? u) () (zm-upper-unicode u)))))))
+
+(def zm-upper-unicode
+  (fn (_ u)
+    (if zm-ansi?
+      (do
+        (if (zm< %zm-width %zm-ucol) () (%zm-glyph u))
+        (set! %zm-ucol (zm+ %zm-ucol 1))))))
 
 ; set_text_style: 0 roman, else a sum of 1 reverse, 2 bold, 4 italic, 8
 ; fixed pitch (which a terminal always is).
@@ -252,3 +264,9 @@
             (if (zm= (zm& s 1) 0) () (%zm-csi "[7m"))
             (if (zm= (zm& s 2) 0) () (%zm-csi "[1m"))
             (if (zm= (zm& s 4) 0) () (%zm-csi "[3m"))))))))
+
+; A ZSCII character of the status line, as the screen draws it.
+(def %zm-status-glyph
+  (fn (_ c)
+    (def u (%zm-zscii->unicode c))
+    (if (null? u) () (%zm-glyph u))))

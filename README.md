@@ -86,6 +86,10 @@ On a terminal, `read_char` takes a single key (the arrows as ZSCII
   dfrotz runs in a Podman container built from `tools/Containerfile.oracle`.
 - `tools/mkspec.sh STORY COMMANDS "heading"`: a spec case whose expected
   output is that transcript.
+- `tools/sweep.sh DIR OUT [COMMANDS]`: every story under DIR against dfrotz,
+  each verdict one of same, same but blank lines (dfrotz leaves those out at
+  the top of a cleared screen), differs, or ERROR; the stories are read
+  where they are, so a private collection can be swept without copying it.
 
 ## Tests
 
