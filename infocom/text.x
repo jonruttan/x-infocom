@@ -184,6 +184,7 @@
   (fn (_)
     (set! %zm-abbrevs (%zm-vec 96))
     (set! %zm-scache (%zm-vec zm-size))
+    (%zm-utable-set!)
     (if (null? %zm-obuf)
       (do
         (set! %zm-obuf (%zm-str-make %zm-obuf-size))
@@ -243,10 +244,34 @@
 
 (def zm-width! (fn (_ w) (set! %zm-width w)))
 
-(def %zm-glyph
+(def %zm-glyph (fn (_ u) (%zm-out-unicode u)))
+
+; ZSCII to Unicode: 32-126 are ASCII; 155 on go through the story's own
+; translation table when its header extension names one (version 5 on),
+; else the default table of the standard; anything else prints nothing.
+(def %zm-utable ())
+(def %zm-utable-set!
+  (fn (_)
+    (set! %zm-utable %zm-unicode)
+    (if (zm< zm-version 5) ()
+      (do
+        (def ext (zm-rw 54))
+        (if (if (zm= ext 0) #f (zm< 2 (zm-rw ext)))
+          (do
+            (def t (zm-rw (zm+ ext 6)))
+            (if (zm= t 0) ()
+              (do
+                (def n (zm-rb t))
+                (def v (%zm-vec n))
+                (def go (fn (self i) (if (zm< i n) (do (%zm-obj-set! v (zm+ i 1) (zm-rw (zm+ (zm+ t 1) (zm<< i 1)))) (self (zm+ i 1))))))
+                (go 0)
+                (set! %zm-utable v)))))))))
+
+(def %zm-zscii->unicode
   (fn (_ c)
-    (if (zm< c 127) (%zm-out-byte c)
-      (%zm-out-unicode (%zm-obj-ref %zm-unicode (zm- c 154))))))
+    (if (if (zm< c 32) #f (zm< c 127)) c
+      (if (if (zm< c 155) #t (zm< (zm+ 154 (%zm-obj-ref %zm-utable 0)) c)) ()
+        (%zm-obj-ref %zm-utable (zm- c 154))))))
 
 (def %zm-out-spaces
   (fn (_)
@@ -272,15 +297,27 @@
         (set! %zm-word ())
         (set! %zm-wlen 0)))))
 
+; The lower window holds Unicode: a ZSCII character is translated first,
+; and print_unicode's code point joins the same word.
 (def %zm-screen-zscii
   (fn (_ c)
+    (if (if (zm= c 13) #t (zm= c 10))
+      (do (%zm-commit) (set! %zm-spaces 0) (%zm-out-byte 10) (set! %zm-col 0))
+      (do
+        (def u (%zm-zscii->unicode c))
+        (if (null? u) () (%zm-screen-unicode u))))))
+
+(def %zm-screen-unicode
+  (fn (_ u)
     (match
-      ((if (zm= c 13) #t (zm= c 10))
-        (do (%zm-commit) (set! %zm-spaces 0) (%zm-out-byte 10) (set! %zm-col 0)))
-      ((zm= c 32)
+      ((zm= u 32)
         (do (%zm-commit) (set! %zm-spaces (zm+ %zm-spaces 1))))
-      ((if (zm< c 32) #t (if (zm< 126 c) (if (zm< c 155) #t (zm< 223 c)) #f)) ())
-      (#t (do (set! %zm-word (pair c %zm-word)) (set! %zm-wlen (zm+ %zm-wlen 1)))))))
+      ; a hyphen ends a piece of a word: the line may break after it
+      ((zm= u 45)
+        (do (set! %zm-word (pair u %zm-word)) (set! %zm-wlen (zm+ %zm-wlen 1)) (%zm-commit)))
+      ; control characters print nothing: C0, DEL and C1
+      ((if (zm< u 32) #t (if (zm< 126 u) (zm< u 160) #f)) ())
+      (#t (do (set! %zm-word (pair u %zm-word)) (set! %zm-wlen (zm+ %zm-wlen 1)))))))
 
 ; Stream 3: a stack of (table . count); output lands in the innermost.
 (def %zm-s3-zscii
@@ -347,5 +384,6 @@
 (def zm-out-unicode
   (fn (_ u)
     (if (null? %zm-stream3)
-      (if %zm-stream1 (%zm-out-unicode u))
+      (if %zm-stream1
+        (if (zm= zm-window 0) (%zm-screen-unicode u) (zm-upper-unicode u)))
       (%zm-s3-zscii 63))))

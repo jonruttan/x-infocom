@@ -56,7 +56,7 @@ awk -v cmds="$cmds" '
 	}
 	NR <= 2 { next }
 	skip { skip = 0; if ($0 == "") next }
-	/Score: -?[0-9]+ +Moves: [0-9]+ *$/ {
+	/(Score: -?[0-9]+ +Moves: [0-9]+|Time: +[0-9]+:[0-9]+ [ap]m) *$/ {
 		s = $0
 		if (substr(s, 1, 1) == ">") { k++; print ">" c[k]; s = substr(s, 2) }
 		# a file name read on a prompt line, the status drawn after it

@@ -30,8 +30,16 @@
 (def zm-start!
   (fn (_ path)
     (zm-load! path)
+    ; the first byte of a story is its version, 1 to 8; anything else is
+    ; not a story file at all
+    (if (if (zm< zm-version 1) #t (zm< 8 zm-version))
+      (Err raise (lit infocom)
+        (Str8 append "not a Z-machine story file (version byte " (Str8 append (%zm-hex-str zm-version) ")"))
+        zm-version))
     (if (if (zm< zm-version 3) #t (if (zm= zm-version 6) #t (zm= zm-version 7)))
-      (Err raise (lit infocom) "story version not served" zm-version))
+      (Err raise (lit infocom)
+        (Str8 append "story version " (Str8 append (%zm-hex-str zm-version) " not served (3, 4, 5 and 8 are)"))
+        zm-version))
     (set! %zm-story-name (%zm-stem path))
     (set! %qz-default ())
     (zm-decode-reset!)
@@ -43,9 +51,18 @@
     (zm-screen-start!)
     zm-hdr-pc))
 
-(def zm-run
-  (fn (self pc)
-    (if (zm< pc 0) pc (self ((zm-insn-at pc))))))
+; Run from pc until an instruction answers a negative pc.  Between two
+; instructions nothing is mid-flight, so every %zm-run-sweep of them the
+; loop collects: a story can run long before its first read, where the
+; other collect is.
+(def %zm-run-sweep 50000)
+(def %zm-run-from
+  (fn (self pc k)
+    (if (zm< pc 0) pc
+      (if (zm= k 0)
+        (do (Heap collect) (self pc %zm-run-sweep))
+        (self ((zm-insn-at pc)) (zm- k 1))))))
+(def zm-run (fn (_ pc) (%zm-run-from pc %zm-run-sweep)))
 
 ; Run the story at path on the given command lines, echoed as typed.
 (def zm-play
