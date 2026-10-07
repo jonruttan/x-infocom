@@ -16,7 +16,8 @@
 (provide infocom/text
   zm-zstring zm-zstring-at zm-encode-word
   zm-out-zscii zm-out-codes zm-out-num zm-out-ascii zm-out-unicode zm-flush
-  zm-stream! zm-text-reset! zm-output-fd! zm-width! zm-col-reset!)
+  zm-stream! zm-text-reset! zm-output-fd! zm-width! zm-col-reset!
+  zm-lines-before-line)
 
 ; Alphabet 2 from Z-character 6: 6 is the escape (never looked up), 7 a
 ; newline, then the punctuation row.
@@ -191,17 +192,53 @@
         (set! %zm-optr (%zm-str->ptr %zm-obuf))))
     (set! %zm-olen 0)
     (set! %zm-col 0)
+    (set! %zm-line-start 0)
     (set! %zm-word ())
     (set! %zm-wlen 0)
     (set! %zm-spaces 0)
     (set! %zm-stream1 #t)
     (set! %zm-stream3 ())))
 
+; Where the line in progress begins in the byte buffer: 0 after a write
+; that ended a line, -1 once a write has sent part of the line out.
+(def %zm-line-start 0)
+
 ; The byte buffer, written out when full and on every flush.
 (def %zm-write-out
   (fn (_)
     (if (zm< 0 %zm-olen)
-      (do (zm-file-write %zm-out-fd %zm-obuf %zm-olen) (set! %zm-olen 0)))))
+      (do
+        (zm-file-write %zm-out-fd %zm-obuf %zm-olen)
+        (set! %zm-line-start (if (zm= %zm-line-start %zm-olen) 0 -1))
+        (set! %zm-olen 0)))))
+
+; Whole lines -- each a list of Unicode code points -- out ahead of the line
+; in progress, so they read before the prompt they belong to; when part of
+; that line has already been written, after it instead, on lines of their
+; own.  Nothing they hold is wrapped or counted as the line's.
+(def zm-lines-before-line
+  (fn (_ lines)
+    (%zm-commit)
+    (def put
+      (fn (self ls)
+        (if (null? ls) ()
+          (do
+            (def go (fn (self cs) (if (null? cs) () (do (%zm-glyph (first cs)) (self (rest cs))))))
+            (go (first ls))
+            (%zm-out-byte 10)
+            (self (rest ls))))))
+    (if (zm< %zm-line-start 0)
+      (do (%zm-out-byte 10) (put lines) (set! %zm-col 0))
+      (do
+        (def take
+          (fn (self i acc)
+            (if (zm< i %zm-line-start) acc
+              (self (zm- i 1) (pair (zm& (%zm-pref %zm-optr i 1) 255) acc)))))
+        (def held (take (zm- %zm-olen 1) ()))
+        (set! %zm-olen %zm-line-start)
+        (put lines)
+        (def back (fn (self bs) (if (null? bs) () (do (%zm-out-byte (first bs)) (self (rest bs))))))
+        (back held)))))
 
 ; Everything held, out: the word in hand, the spaces after it, the buffer.
 (def zm-flush
@@ -211,13 +248,14 @@
     (%zm-write-out)))
 
 ; A line typed at the terminal ends with the user's own Return.
-(def zm-col-reset! (fn (_) (set! %zm-col 0)))
+(def zm-col-reset! (fn (_) (set! %zm-col 0) (set! %zm-line-start %zm-olen)))
 
 (def %zm-out-byte
   (fn (_ b)
     (if (zm< %zm-olen %zm-obuf-size) () (%zm-write-out))
     (%zm-pset! %zm-optr %zm-olen b 1)
-    (set! %zm-olen (zm+ %zm-olen 1))))
+    (set! %zm-olen (zm+ %zm-olen 1))
+    (if (zm= b 10) (set! %zm-line-start %zm-olen))))
 
 ; A Unicode code point as UTF-8.
 (def %zm-out-unicode

@@ -10,7 +10,8 @@ screen is drawn with ANSI sequences at the window's size: the status line
 (before version 4) and the upper window held above a scroll region, text
 styles as reverse, bold and italic.  Through a pipe, under `TERM=dumb` or
 with `--plain`, it prints lines instead -- the lower window only, wrapped
-at 80 columns -- which is what transcripts and the specs use.
+at 80 columns -- which is what transcripts and the specs use; `--upper` adds
+the status line and the upper window to them, as lines.
 
 ## The machine
 
@@ -38,8 +39,7 @@ the stack and the frames, and restore_undo puts the newest back.
 Not served yet:
 
 - the auxiliary saves and restores of a table;
-- sound, fonts and colours; on the plain screen, the upper window and text
-  styles (output to the upper window is not printed);
+- sound, fonts and colours; text styles on the plain screen;
 - the timed and terminating-character forms of input.
 
 ## The command line
@@ -54,6 +54,7 @@ Play:
 | option | |
 |---|---|
 | `-p`, `--plain` | print lines, not a drawn screen |
+| `-u`, `--upper` | on printed lines, the status line and upper window too: each changed row, as a line before the prompt it came with |
 | `-w`, `--width N` | wrap printed lines at N columns (0: never) |
 | `-s`, `--seed N` | seed the random numbers, for play that repeats (else the clock) |
 | `-r`, `--restore FILE` | begin from a saved game |
