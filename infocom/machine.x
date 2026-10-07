@@ -87,7 +87,6 @@
 ; sread (versions 1 to 4): text from byte 1, ended by a zero byte.
 (def zm-sread
   (fn (_ t p)
-    (zm-status!)
     (def line (zm-read-line (zm- (zm-rb t) 1)))
     (if (null? line) #f
       (do

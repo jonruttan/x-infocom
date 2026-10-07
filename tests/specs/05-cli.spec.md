@@ -21,6 +21,7 @@ Play a Z-machine story (versions 3, 4, 5 and 8), or describe it
 
 Play:
 	-p,--plain		Print lines, not a drawn screen
+	-u,--upper		On printed lines, the status line and upper window too
 	-w,--width N		Wrap printed lines at N columns (0: never)
 	-s,--seed N		Seed the random numbers, for play that repeats
 	-r,--restore FILE	Begin from a saved game
@@ -48,8 +49,8 @@ Describe, then stop:
 ```
 ---
 ```output
-('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f)))
-('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t)))
+('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f)))
+('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f)))
 ('describe "z.z3" ('info 'tree ('dis . 20229)))
 (('refuse ()) ('refuse "unrecognized option '-z'") ('refuse "one story at a time") ('refuse "--width takes a number") ('help) ('help))
 ```

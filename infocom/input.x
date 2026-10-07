@@ -70,6 +70,7 @@
 ; not begun -- so the sweep goes here, as the REPL's goes at its prompt.
 (def zm-read-line
   (fn (_ max)
+    (zm-before-read!)
     (zm-flush)
     (Heap collect)
     (def line (%zm-source))
@@ -85,6 +86,7 @@
 ; The next line as typed, for a file name: (#t . codes), or ().
 (def zm-read-raw-line
   (fn (_)
+    (zm-before-read!)
     (zm-flush)
     (def line (%zm-source))
     (if (null? line) ()
@@ -230,6 +232,7 @@
 ; One key from the terminal: its ZSCII, or () when input has ended.
 (def %zm-read-key
   (fn (_ fd)
+    (zm-before-read!)
     (zm-flush)
     (def saved (Term raw-with-signals! fd))
     (def byte

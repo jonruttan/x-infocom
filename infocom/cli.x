@@ -24,6 +24,7 @@
     (list
       (Opts text "Play:")
       (Opts flag "-p" "--plain" "Print lines, not a drawn screen")
+      (Opts flag "-u" "--upper" "On printed lines, the status line and upper window too")
       (Opts arg "-w" "--width" "N" "Wrap printed lines at N columns (0: never)")
       (Opts arg "-s" "--seed" "N" "Seed the random numbers, for play that repeats")
       (Opts arg "-r" "--restore" "FILE" "Begin from a saved game")
@@ -81,7 +82,7 @@
 ;   (describe STORY VIEWS)      VIEWS, in order: info objects tree dict
 ;                               abbrevs (dis . ADDR)
 ;   (play STORY SETTINGS)       SETTINGS an alist: plain width seed restore
-;                               save-dir echo
+;                               save-dir echo upper
 (def zm-cli-plan
   (fn (_ argv)
     (if (if (Opts help? zm-options argv) #t
@@ -119,7 +120,8 @@
                         (pair (lit seed) (if (on? "-s") (num "-s" #f) ()))
                         (pair (lit restore) (val "-r"))
                         (pair (lit save-dir) (val "-S"))
-                        (pair (lit echo) (on? "-e"))))))))))))
+                        (pair (lit echo) (on? "-e"))
+                        (pair (lit upper) (on? "-u"))))))))))))
 
 (def %zm-say-err (fn (_ s) (zm-file-write 2 s (%zm-byte-len s))))
 
@@ -164,6 +166,7 @@
     (zm-sys-close 3)
     (zm-input-fd! 0)
     (if (%zm-setting settings (lit echo)) (zm-echo! #t))
+    (zm-plain-upper! (%zm-setting settings (lit upper)))
     (if (null? (%zm-setting settings (lit save-dir))) ()
       (zm-save-dir! (%zm-setting settings (lit save-dir))))
     (%zm-screen-choose! (%zm-setting settings (lit plain)) (%zm-setting settings (lit width)))

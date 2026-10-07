@@ -20,7 +20,7 @@
 
 (provide infocom/screen
   zm-screen-plain! zm-screen-ansi! zm-screen-start! zm-screen-end!
-  zm-ansi? zm-window zm-status! zm-status-codes
+  zm-ansi? zm-window zm-status! zm-status-codes zm-before-read! zm-plain-upper!
   zm-split! zm-set-window! zm-erase-window! zm-erase-line! zm-set-cursor!
   zm-cursor zm-text-style! zm-upper-zscii zm-upper-unicode)
 
@@ -88,6 +88,8 @@
   (fn (_)
     (set! zm-window 0)
     (set! %zm-upper 0)
+    (set! %zm-grid ())
+    (set! %zm-status-shown ())
     (if zm-ansi?
       (do
         (%zm-csi "[2J")
@@ -148,7 +150,8 @@
       (List append place (pair 32 right))
       (List append place (spaces gap right)))))
 
-; Draw the status line on the terminal; nothing on the plain screen.
+; Draw the status line on the terminal; on the plain screen it is one of
+; the rows zm-before-read! prints, when they are printed at all.
 (def zm-status!
   (fn (_)
     (if (if zm-ansi? (zm< zm-version 4) #f)
@@ -161,6 +164,101 @@
         (go (zm-status-codes %zm-width))
         (%zm-csi "[0m")
         (%zm-csi "8")))))
+
+; --- the plain screen's fixed rows -------------------------------------------
+; With zm-plain-upper! on, the plain screen prints what the fixed rows hold,
+; as lines: the status line when it has changed, and the upper window's
+; rows -- kept in a grid as a terminal would hold them -- that have changed
+; and are not blank.  They are printed before each read and when the story
+; goes back to the lower window, ahead of the line in progress, so a
+; transcript reads them before the prompt they came with.
+
+(def %zm-plain-upper? #f)
+(def zm-plain-upper! (fn (_ on) (set! %zm-plain-upper? on)))
+(def %zm-grid ())
+(def %zm-grid-shown ())
+(def %zm-status-shown ())
+
+(def %zm-grid-width (fn (_) (if (zm< 0 %zm-width) %zm-width 80)))
+
+(def %zm-blank-row
+  (fn (_)
+    (def w (%zm-grid-width))
+    (def r (%zm-vec w))
+    (def go (fn (self i) (if (zm< w i) () (do (%zm-obj-set! r i 32) (self (zm+ i 1))))))
+    (go 1)
+    r))
+
+; A grid of n rows, those of the old one that fit kept.
+(def %zm-grid-size!
+  (fn (_ n keep?)
+    (def g (%zm-vec n))
+    (def s (%zm-vec n))
+    (def old (if (null? %zm-grid) 0 (%zm-obj-ref %zm-grid 0)))
+    (def go
+      (fn (self i)
+        (if (zm< n i) ()
+          (do
+            (if (if keep? (zm< old i) #t)
+              (do (%zm-obj-set! g i (%zm-blank-row)) (%zm-obj-set! s i ()))
+              (do (%zm-obj-set! g i (%zm-obj-ref %zm-grid i)) (%zm-obj-set! s i (%zm-obj-ref %zm-grid-shown i))))
+            (self (zm+ i 1))))))
+    (go 1)
+    (set! %zm-grid g)
+    (set! %zm-grid-shown s)))
+
+(def %zm-grid-put!
+  (fn (_ u)
+    (if (if (null? %zm-grid) #f (if (zm< (%zm-obj-ref %zm-grid 0) %zm-urow) #f (zm< %zm-ucol (zm+ (%zm-grid-width) 1))))
+      (%zm-obj-set! (%zm-obj-ref %zm-grid %zm-urow) %zm-ucol u))))
+
+; A row's code points, its trailing blanks dropped.
+(def %zm-row-text
+  (fn (_ r)
+    (def go
+      (fn (self i acc)
+        (if (zm< i 1) acc
+          (self (zm- i 1) (if (if (null? acc) (zm= (%zm-obj-ref r i) 32) #f) acc (pair (%zm-obj-ref r i) acc))))))
+    (go (%zm-obj-ref r 0) ())))
+
+; The rows that changed since they were printed and are not blank, in order;
+; each is marked printed.
+(def %zm-grid-lines
+  (fn (_)
+    (def n (if (null? %zm-grid) 0 (%zm-obj-ref %zm-grid 0)))
+    (def go
+      (fn (self i acc)
+        (if (zm< n i) (%zm-rev acc)
+          (do
+            (def t (%zm-row-text (%zm-obj-ref %zm-grid i)))
+            (def changed? (not (equal? t (%zm-obj-ref %zm-grid-shown i))))
+            (%zm-obj-set! %zm-grid-shown i t)
+            (self (zm+ i 1) (if (if changed? (pair? t) #f) (pair t acc) acc))))))
+    (go 1 ())))
+
+; The status line as code points, trailing blanks dropped, when it changed.
+(def %zm-status-line
+  (fn (_)
+    (if (zm< zm-version 4)
+      (do
+        (def cs (List filter (fn (_ u) (not (null? u))) (List map %zm-zscii->unicode (zm-status-codes (%zm-grid-width)))))
+        (def trim (fn (self l) (if (null? l) () (if (zm= (first l) 32) (self (rest l)) l))))
+        (def t (%zm-rev (trim (%zm-rev cs))))
+        (if (equal? t %zm-status-shown) () (do (set! %zm-status-shown t) (list t))))
+      ())))
+
+(def %zm-plain-show!
+  (fn (_ status?)
+    (if (if zm-ansi? #f %zm-plain-upper?)
+      (do
+        (def lines (List append (if status? (%zm-status-line) ()) (%zm-grid-lines)))
+        (if (null? lines) () (zm-lines-before-line lines))))))
+
+; Before every read: the status line drawn, or the fixed rows printed.
+(def zm-before-read!
+  (fn (_)
+    (zm-status!)
+    (%zm-plain-show! #t)))
 
 ; --- the upper window --------------------------------------------------------
 
@@ -185,7 +283,8 @@
           (do
             (%zm-csi "7")
             (%zm-clear-rows (zm+ (%zm-status-rows) 1) (%zm-top))
-            (%zm-csi "8")))))))
+            (%zm-csi "8"))))
+      (if %zm-plain-upper? (%zm-grid-size! n (not (zm< zm-version 4)))))))
 
 ; set_window: 1 the upper window, its cursor at the top left; 0 back to
 ; the lower window where it was left.
@@ -195,10 +294,10 @@
     (if (zm= w zm-window) ()
       (do
         (set! zm-window w)
+        (if (zm= w 1) (do (set! %zm-urow 1) (set! %zm-ucol 1)))
         (if zm-ansi?
-          (if (zm= w 1)
-            (do (%zm-csi "7") (set! %zm-urow 1) (set! %zm-ucol 1) (%zm-upper-goto))
-            (%zm-csi "8")))))))
+          (if (zm= w 1) (do (%zm-csi "7") (%zm-upper-goto)) (%zm-csi "8"))
+          (if (zm= w 0) (%zm-plain-show! #f)))))))
 
 (def zm-set-cursor!
   (fn (_ line col)
@@ -229,28 +328,39 @@
             (%zm-csi "7")
             (%zm-clear-rows (zm+ (%zm-status-rows) 1) (%zm-top))
             (%zm-csi "8")))
-        (#t ())))))
+        (#t ()))
+      (if (if %zm-plain-upper? (if (zm< w 0) #t (zm= w 1)) #f)
+        (%zm-grid-size! %zm-upper #f)))))
 
 (def zm-erase-line!
   (fn (_ v)
-    (if (if zm-ansi? (if (zm= v 1) (zm= zm-window 1) #f) #f) (%zm-csi "[K"))))
+    (if (if (zm= v 1) (zm= zm-window 1) #f)
+      (if zm-ansi? (%zm-csi "[K")
+        (if (if %zm-plain-upper? (not (null? %zm-grid)) #f)
+          (do
+            (def keep %zm-ucol)
+            (def go (fn (self) (if (zm< (%zm-grid-width) %zm-ucol) () (do (%zm-grid-put! 32) (set! %zm-ucol (zm+ %zm-ucol 1)) (self)))))
+            (go)
+            (set! %zm-ucol keep)))))))
 
 ; A character in the upper window: placed, never wrapped, cut at the edge.
 (def zm-upper-zscii
   (fn (_ c)
-    (if zm-ansi?
-      (if (if (zm= c 13) #t (zm= c 10))
-        (do (set! %zm-urow (zm+ %zm-urow 1)) (set! %zm-ucol 1) (%zm-upper-goto))
-        (do
-          (def u (%zm-zscii->unicode c))
-          (if (null? u) () (zm-upper-unicode u)))))))
+    (if (if (zm= c 13) #t (zm= c 10))
+      (do
+        (set! %zm-urow (zm+ %zm-urow 1))
+        (set! %zm-ucol 1)
+        (if zm-ansi? (%zm-upper-goto)))
+      (do
+        (def u (%zm-zscii->unicode c))
+        (if (null? u) () (zm-upper-unicode u))))))
 
 (def zm-upper-unicode
   (fn (_ u)
     (if zm-ansi?
-      (do
-        (if (zm< %zm-width %zm-ucol) () (%zm-glyph u))
-        (set! %zm-ucol (zm+ %zm-ucol 1))))))
+      (if (zm< %zm-width %zm-ucol) () (%zm-glyph u))
+      (if %zm-plain-upper? (%zm-grid-put! u)))
+    (set! %zm-ucol (zm+ %zm-ucol 1))))
 
 ; set_text_style: 0 roman, else a sum of 1 reverse, 2 bold, 4 italic, 8
 ; fixed pitch (which a terminal always is).
