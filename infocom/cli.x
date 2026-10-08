@@ -131,15 +131,20 @@
 
 ; The terminal screen when standard output is a terminal that is not
 ; "dumb" and --plain was not given; else the plain one.
+;
+; --plain on such a terminal still prints styles and colours, with no
+; drawing; through a pipe the lines are the text alone.
 (def %zm-screen-choose!
   (fn (_ plain? width)
     (def term (Sys getenv "TERM"))
-    (if (if plain? #f
-          (if (Sys isatty 1) (if (null? term) #t (not (str=? term "dumb"))) #f))
+    (def terminal? (if (Sys isatty 1) (if (null? term) #t (not (str=? term "dumb"))) #f))
+    (if (if plain? #f terminal?)
       (do
         (def w (Term window 1))
         (zm-screen-ansi! (first w) (rest w) #f))
-      (zm-screen-plain! width))))
+      (do
+        (zm-screen-plain! width)
+        (zm-plain-sgr! terminal?)))))
 
 (def %zm-describe
   (fn (_ story views)

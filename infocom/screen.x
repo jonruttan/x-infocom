@@ -22,7 +22,8 @@
   zm-screen-plain! zm-screen-ansi! zm-screen-start! zm-screen-end!
   zm-ansi? zm-window zm-status! zm-status-codes zm-before-read! zm-plain-upper!
   zm-split! zm-set-window! zm-erase-window! zm-erase-line! zm-set-cursor!
-  zm-cursor zm-text-style! zm-upper-zscii zm-upper-unicode)
+  zm-cursor zm-text-style! zm-upper-zscii zm-upper-unicode
+  zm-set-colour! zm-set-true-colour! zm-plain-sgr!)
 
 (def zm-ansi? #f)
 (def %zm-esc-visible? #f)
@@ -36,6 +37,7 @@
 (def zm-screen-plain!
   (fn (_ width)
     (set! zm-ansi? #f)
+    (set! %zm-plain-sgr? #f)
     (zm-width! width)))
 
 ; The terminal screen, width by rows; visible? writes ESC as ^[ so a spec
@@ -90,8 +92,12 @@
     (set! %zm-upper 0)
     (set! %zm-grid ())
     (set! %zm-status-shown ())
+    (set! %zm-style 0)
+    (set! %zm-fg "")
+    (set! %zm-bg "")
     (if zm-ansi?
       (do
+        (%zm-sgr!)
         (%zm-csi "[2J")
         (%zm-goto (zm+ (%zm-top) 1) 1)
         (%zm-region!)
@@ -159,10 +165,10 @@
         (%zm-commit)
         (%zm-csi "7")
         (%zm-goto 1 1)
-        (%zm-csi "[7m")
+        (%zm-csi "[0;7m")
         (def go (fn (self cs) (if (null? cs) () (do (%zm-status-glyph (first cs)) (self (rest cs))))))
         (go (zm-status-codes %zm-width))
-        (%zm-csi "[0m")
+        (%zm-sgr!)
         (%zm-csi "8")))))
 
 ; --- the plain screen's fixed rows -------------------------------------------
@@ -362,18 +368,76 @@
       (if %zm-plain-upper? (%zm-grid-put! u)))
     (set! %zm-ucol (zm+ %zm-ucol 1))))
 
+; --- styles and colours ------------------------------------------------------
+; The text's look is one SGR state -- the style, then the foreground and
+; background as SGR parameters, "" for the terminal's own -- sent whole on
+; every change, so a style of 0 keeps the colours and the status line puts
+; them back after drawing in reverse.  The drawn screen sends it, and so
+; does the plain one when it prints to a terminal (zm-plain-sgr!).
+
+(def %zm-style 0)
+(def %zm-fg "")
+(def %zm-bg "")
+(def %zm-plain-sgr? #f)
+(def zm-plain-sgr! (fn (_ on) (set! %zm-plain-sgr? on)))
+(def %zm-sgr? (fn (_) (if zm-ansi? #t %zm-plain-sgr?)))
+
+(def %zm-sgr!
+  (fn (_)
+    (%zm-csi (Str8 append "[0"
+               (if (zm= (zm& %zm-style 1) 0) "" ";7")
+               (if (zm= (zm& %zm-style 2) 0) "" ";1")
+               (if (zm= (zm& %zm-style 4) 0) "" ";3")
+               %zm-fg %zm-bg "m"))))
+
+; The spaces held before the change are written first, in the look they
+; were typed in.
+(def %zm-look!
+  (fn (_) (if (%zm-sgr?) (do (%zm-commit) (%zm-out-spaces) (%zm-sgr!)))))
+
 ; set_text_style: 0 roman, else a sum of 1 reverse, 2 bold, 4 italic, 8
-; fixed pitch (which a terminal always is).
+; fixed pitch (which a terminal always is), added to the styles already on
+; (Standard 1.1: bold then italic is bold italic).
 (def zm-text-style!
   (fn (_ s)
-    (if zm-ansi?
-      (do
-        (%zm-commit)
-        (if (zm= s 0) (%zm-csi "[0m")
-          (do
-            (if (zm= (zm& s 1) 0) () (%zm-csi "[7m"))
-            (if (zm= (zm& s 2) 0) () (%zm-csi "[1m"))
-            (if (zm= (zm& s 4) 0) () (%zm-csi "[3m"))))))))
+    (set! %zm-style (if (zm= s 0) 0 (zm| %zm-style s)))
+    (%zm-look!)))
+
+; set_colour: 0 keeps a colour, 1 is the terminal's own, 2 to 9 are black,
+; red, green, yellow, blue, magenta, cyan and white -- ANSI's order, from
+; 30 for the foreground and 40 for the background.
+(def %zm-colour-sgr
+  (fn (_ c base was)
+    (match
+      ((zm= c 0) was)
+      ((zm= c 1) "")
+      ((if (zm< c 2) #f (zm< c 10)) (Str8 append ";" (%zm-digits (zm+ base (zm- c 2)))))
+      (#t was))))
+
+(def zm-set-colour!
+  (fn (_ f b)
+    (set! %zm-fg (%zm-colour-sgr f 30 %zm-fg))
+    (set! %zm-bg (%zm-colour-sgr b 40 %zm-bg))
+    (%zm-look!)))
+
+; set_true_colour: fifteen bits, five each of red, green and blue from the
+; low end, sent as 24-bit colour; -1 (65535) the terminal's own, -2 (65534)
+; keeps the colour.
+(def %zm-true-sgr
+  (fn (_ c lead was)
+    (match
+      ((zm= c 65535) "")
+      ((zm= c 65534) was)
+      (#t
+        (do
+          (def ch (fn (_ k) (%zm-digits (zm/ (zm* (zm& (zm>> c k) 31) 255) 31))))
+          (Str8 append ";" lead ";2;" (ch 0) ";" (ch 5) ";" (ch 10)))))))
+
+(def zm-set-true-colour!
+  (fn (_ f b)
+    (set! %zm-fg (%zm-true-sgr f "38" %zm-fg))
+    (set! %zm-bg (%zm-true-sgr b "48" %zm-bg))
+    (%zm-look!)))
 
 ; A ZSCII character of the status line, as the screen draws it.
 (def %zm-status-glyph
