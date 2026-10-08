@@ -64,6 +64,15 @@
     (set! %zm-orig (zm-file-read-all path))
     (set! %zm-orig-ptr (%zm-str->ptr %zm-orig))
     (set! zm-version (zm-rb 0))
+    ; the first byte of a story is its version, 1 to 8, and the header is 64
+    ; bytes; anything else is not a story file, and is refused before the
+    ; header is read or written
+    (if (if (zm< zm-version 1) #t (zm< 8 zm-version))
+      (Err raise (lit infocom)
+        (Str8 append "not a Z-machine story file (version byte " (%zm-hex-str zm-version) ")")
+        zm-version))
+    (if (zm< zm-size 64)
+      (Err raise (lit infocom) "not a Z-machine story file (shorter than its header)" zm-size))
     (set! %zm-pack-shift
       (if (zm< zm-version 4) 1 (if (zm< zm-version 8) 2 3)))
     (set! zm-hdr-high (zm-rw 4))

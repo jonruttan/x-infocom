@@ -60,6 +60,7 @@ Play:
 | `-r`, `--restore FILE` | begin from a saved game |
 | `-S`, `--save-dir DIR` | put save files in DIR |
 | `-e`, `--echo` | echo each command read, as a transcript shows it |
+| `-H`, `--history FILE` | keep the commands typed at a terminal in FILE; empty, nowhere |
 
 Describe the story, then stop (in the spirit of infodump and txd):
 
@@ -72,8 +73,15 @@ Describe the story, then stop (in the spirit of infodump and txd):
 | `-a`, `--abbrevs` | the abbreviations |
 | `-D`, `--dis ADDR` | disassemble the routine at byte ADDR (hex; 0, the start) |
 
+On a terminal a command is typed through x-lang's line editor: the arrows
+move along it and back through the commands typed before, ctrl-r searches
+them, ctrl-d on an empty line or ctrl-c ends the game.  The commands are
+kept between games in `x/infocom-history` under `$XDG_STATE_HOME`
+(`~/.local/state` when that is not set), or where `--history` says.
+
 On a terminal, `read_char` takes a single key (the arrows as ZSCII
-129-132); elsewhere it takes the next line's first character.
+129-132); elsewhere a line is the keys typed for it, one a `read_char`,
+then Return, and what `read_char` leaves of a line the next read takes.
 
 ## Tools
 

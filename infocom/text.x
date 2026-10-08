@@ -17,7 +17,7 @@
   zm-zstring zm-zstring-at zm-encode-word
   zm-out-zscii zm-out-codes zm-out-num zm-out-ascii zm-out-unicode zm-flush
   zm-stream! zm-text-reset! zm-output-fd! zm-width! zm-col-reset!
-  zm-lines-before-line)
+  zm-lines-before-line zm-row-str)
 
 ; Alphabet 2 from Z-character 6: 6 is the escape (never looked up), 7 a
 ; newline, then the punctuation row.
@@ -192,6 +192,7 @@
         (set! %zm-optr (%zm-str->ptr %zm-obuf))))
     (set! %zm-olen 0)
     (set! %zm-col 0)
+    (set! %zm-lower-row ())
     (set! %zm-line-start 0)
     (set! %zm-word ())
     (set! %zm-wlen 0)
@@ -248,7 +249,7 @@
     (%zm-write-out)))
 
 ; A line typed at the terminal ends with the user's own Return.
-(def zm-col-reset! (fn (_) (set! %zm-col 0) (set! %zm-line-start %zm-olen)))
+(def zm-col-reset! (fn (_) (set! %zm-col 0) (set! %zm-lower-row ()) (set! %zm-line-start %zm-olen)))
 
 (def %zm-out-byte
   (fn (_ b)
@@ -276,6 +277,14 @@
 ; line and the spaces are dropped.  Width 0 never wraps.
 (def %zm-width 80)
 (def %zm-col 0)
+
+; The lower window's row in progress, newest code point first: what a line
+; editor redraws as its prompt, since its redraw starts the row over.
+(def %zm-lower-row ())
+
+; The row as a string.
+(def zm-row-str (fn (_) (%qz-codes->str (%zm-rev %zm-lower-row))))
+
 (def %zm-word ())
 (def %zm-wlen 0)
 (def %zm-spaces 0)
@@ -313,7 +322,7 @@
 
 (def %zm-out-spaces
   (fn (_)
-    (def go (fn (self n) (if (zm< 0 n) (do (%zm-out-byte 32) (self (zm- n 1))))))
+    (def go (fn (self n) (if (zm< 0 n) (do (%zm-out-byte 32) (set! %zm-lower-row (pair 32 %zm-lower-row)) (self (zm- n 1))))))
     (go %zm-spaces)
     (set! %zm-col (zm+ %zm-col %zm-spaces))
     (set! %zm-spaces 0)))
@@ -327,11 +336,12 @@
                 (zm< %zm-width (zm+ %zm-col (zm+ %zm-spaces %zm-wlen)))
                 #f)
               #f)
-          (do (%zm-out-byte 10) (set! %zm-col 0) (set! %zm-spaces 0))
+          (do (%zm-out-byte 10) (set! %zm-col 0) (set! %zm-lower-row ()) (set! %zm-spaces 0))
           (%zm-out-spaces))
         (def go (fn (self cs) (if (null? cs) () (do (%zm-glyph (first cs)) (self (rest cs))))))
         (go (%zm-rev %zm-word))
         (set! %zm-col (zm+ %zm-col %zm-wlen))
+        (set! %zm-lower-row (List append %zm-word %zm-lower-row))
         (set! %zm-word ())
         (set! %zm-wlen 0)))))
 
@@ -340,7 +350,7 @@
 (def %zm-screen-zscii
   (fn (_ c)
     (if (if (zm= c 13) #t (zm= c 10))
-      (do (%zm-commit) (set! %zm-spaces 0) (%zm-out-byte 10) (set! %zm-col 0))
+      (do (%zm-commit) (set! %zm-spaces 0) (%zm-out-byte 10) (set! %zm-col 0) (set! %zm-lower-row ()))
       (do
         (def u (%zm-zscii->unicode c))
         (if (null? u) () (%zm-screen-unicode u))))))

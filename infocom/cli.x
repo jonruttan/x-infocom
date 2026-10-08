@@ -30,6 +30,7 @@
       (Opts arg "-r" "--restore" "FILE" "Begin from a saved game")
       (Opts arg "-S" "--save-dir" "DIR" "Put save files in DIR")
       (Opts flag "-e" "--echo" "Echo each command read, as a transcript shows it")
+      (Opts arg "-H" "--history" "FILE" "Keep the commands typed at a terminal in FILE (empty: nowhere)")
       (Opts text "Describe, then stop:")
       (Opts flag "-i" "--info" "The header")
       (Opts flag "-o" "--objects" "The objects, attributes and properties")
@@ -82,7 +83,7 @@
 ;   (describe STORY VIEWS)      VIEWS, in order: info objects tree dict
 ;                               abbrevs (dis . ADDR)
 ;   (play STORY SETTINGS)       SETTINGS an alist: plain width seed restore
-;                               save-dir echo upper
+;                               save-dir echo upper history
 (def zm-cli-plan
   (fn (_ argv)
     (if (if (Opts help? zm-options argv) #t
@@ -121,7 +122,8 @@
                         (pair (lit restore) (val "-r"))
                         (pair (lit save-dir) (val "-S"))
                         (pair (lit echo) (on? "-e"))
-                        (pair (lit upper) (on? "-u"))))))))))))
+                        (pair (lit upper) (on? "-u"))
+                        (pair (lit history) (val "-H"))))))))))))
 
 (def %zm-say-err (fn (_ s) (zm-file-write 2 s (%zm-byte-len s))))
 
@@ -164,6 +166,7 @@
   (fn (_ story settings)
     (zm-sys-dup2 3 0)
     (zm-sys-close 3)
+    (zm-history! (%zm-setting settings (lit history)))
     (zm-input-fd! 0)
     (if (%zm-setting settings (lit echo)) (zm-echo! #t))
     (zm-plain-upper! (%zm-setting settings (lit upper)))

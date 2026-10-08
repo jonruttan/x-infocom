@@ -30,12 +30,6 @@
 (def zm-start!
   (fn (_ path)
     (zm-load! path)
-    ; the first byte of a story is its version, 1 to 8; anything else is
-    ; not a story file at all
-    (if (if (zm< zm-version 1) #t (zm< 8 zm-version))
-      (Err raise (lit infocom)
-        (Str8 append "not a Z-machine story file (version byte " (Str8 append (%zm-hex-str zm-version) ")"))
-        zm-version))
     (if (if (zm< zm-version 3) #t (if (zm= zm-version 6) #t (zm= zm-version 7)))
       (Err raise (lit infocom)
         (Str8 append "story version " (Str8 append (%zm-hex-str zm-version) " not served (3, 4, 5 and 8 are)"))

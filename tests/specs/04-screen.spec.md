@@ -128,3 +128,36 @@ lower two
 Score: 6
 >
 ```
+
+## the row a line editor redraws
+
+### is the lower window's row in progress, as it was printed
+
+At a terminal a command is read through x-lang's line editor, whose
+redraw starts the row over: the row the story printed -- its prompt -- is
+what it draws ahead of the command.  A newline or a wrap starts the row
+again; spaces between words are part of it.
+
+```infocom
+(zm-screen-plain! 20)
+(zm-start! (zm-story "zork1.z3"))
+(zm-out-ascii "West of House")
+(zm-out-zscii 13)
+(zm-out-ascii "You are standing in an open field. ")
+(zm-out-unicode 233)
+(zm-out-ascii " >")
+(zm-flush)
+(def %rs-row (zm-row-str))
+(zm-out-zscii 13)
+(zm-flush)
+(write %rs-row)
+(zm-screen-plain! 80)
+()
+```
+---
+```output
+West of House
+You are standing in
+an open field. é >
+"an open field. é >"
+```
