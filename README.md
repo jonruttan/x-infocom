@@ -39,9 +39,7 @@ the stack and the frames, and restore_undo puts the newest back.
 Not served yet:
 
 - the auxiliary saves and restores of a table;
-- sound, fonts and colours; text styles on the plain screen;
-- terminating characters other than Return (the function keys a version 5
-  story can ask to end a read).
+- sound, fonts and colours; text styles on the plain screen.
 
 ## The command line
 
@@ -87,6 +85,12 @@ prompt waits for the first key; once a command is being typed, the line
 editor has it until Return.  Through a pipe no time passes between lines;
 a script for `zm-play` says it does with the symbol `tick` among its
 commands.
+
+A version 5 story can name keys besides Return that end a read -- the
+arrows, function keys and keypad -- and `aread` stores which one did; a
+key the story does not name is passed over.  A script line for `zm-play`
+ended by a key is a pair, `(text . key)`, the key by its ZSCII.  At a
+terminal, Return alone ends a line.
 
 On a terminal, `read_char` takes a single key (the arrows as ZSCII
 129-132); elsewhere a line is the keys typed for it, one a `read_char`,

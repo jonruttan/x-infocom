@@ -63,13 +63,13 @@ routine is its count of locals (0), then its code:
 (zm-out-zscii 13)
 (def %tm-next (zm-read-line 10))
 (zm-flush)
-(write (list (eq? %tm-stop %zm-stopped) (rest %tm-next)))
+(write (list %tm-stop (rest %tm-next)))
 ```
 ---
 ```output
 !
 look
-(#t (108 111 111 107))
+((0) (108 111 111 107))
 ```
 
 ### without a timer, ticks pass unseen
