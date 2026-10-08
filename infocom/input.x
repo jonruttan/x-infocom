@@ -50,13 +50,62 @@
 ; -- is handed to it as the prompt.  The painter and Tab's completer are
 ; x-lang's; a command is not x, so neither runs.  ctrl-d on an empty line
 ; and ctrl-c end the input.
+;
+; The keys the story names as terminating end the line too, taken ahead of
+; the editor's own use of them; and a timed read's routine runs each time
+; its tenths pass with no key, the line drawn again after it.
+(def %zm-line-timer (pair 0 0))
 (def %zm-edited-line
   (fn (_)
     (set! %repl-paint ())
     (set! %repl-marks ())
     (Line completer ())
-    (def s (Line read (zm-row-str)))
-    (if (str? s) (pair #t (%zm-codes-of s)) ())))
+    (def t %zm-line-timer)
+    (set! %zm-line-timer %zm-no-timer)
+    (def s
+      (if (zm= (first t) 0)
+        (Line read-until (zm-row-str) (%zm-end-keys))
+        (Line read-until (zm-row-str) (%zm-end-keys) (pair (first t) (%zm-idle (rest t))))))
+    (match
+      ((str? s) (pair #t (%zm-codes-of s)))
+      ((null? s) ())
+      ((eq? s (lit eof)) ())
+      ((eq? s (lit cancel)) ())
+      ((eq? (first s) (lit stopped)) (pair 0 (%zm-codes-of (rest s))))
+      (#t (pair (%zm-fkey-zscii (first s)) (%zm-codes-of (rest s)))))))
+
+; The timer routine as the line editor calls it: true stops the read, as
+; does the story quitting in it; else the row it leaves is the prompt.
+(def %zm-idle
+  (fn (_ routine)
+    (fn (_)
+      (def r (zm-call-now routine))
+      (zm-before-read!)
+      (zm-flush)
+      (if (if (null? r) #t (not (zm= r 0))) #t (zm-row-str)))))
+
+; The keys besides Return that end a read, by the names Term key gives them,
+; with their ZSCII: the arrows, F1 to F12, the keypad's digits.
+(def %zm-fkeys
+  (list (pair (lit up) 129) (pair (lit down) 130) (pair (lit left) 131) (pair (lit right) 132)
+        (pair (lit f1) 133) (pair (lit f2) 134) (pair (lit f3) 135) (pair (lit f4) 136)
+        (pair (lit f5) 137) (pair (lit f6) 138) (pair (lit f7) 139) (pair (lit f8) 140)
+        (pair (lit f9) 141) (pair (lit f10) 142) (pair (lit f11) 143) (pair (lit f12) 144)
+        (pair (lit kp0) 145) (pair (lit kp1) 146) (pair (lit kp2) 147) (pair (lit kp3) 148)
+        (pair (lit kp4) 149) (pair (lit kp5) 150) (pair (lit kp6) 151) (pair (lit kp7) 152)
+        (pair (lit kp8) 153) (pair (lit kp9) 154)))
+
+(def %zm-fkey-zscii
+  (fn (_ k)
+    (def go (fn (self ks) (if (null? ks) () (if (eq? (first (first ks)) k) (rest (first ks)) (self (rest ks))))))
+    (go %zm-fkeys)))
+
+; The story's terminating keys as Term key names them: the ones of the
+; table at the header's word 0x2E that a terminal can send.
+(def %zm-end-keys
+  (fn (_)
+    (List map (fn (_ kz) (first kz))
+      (List filter (fn (_ kz) (%zm-terminator? (rest kz))) %zm-fkeys))))
 
 ; Where the commands typed are kept: FILE, or nowhere when FILE is empty;
 ; by default x/infocom-history under the XDG state directory.  Set before
@@ -136,19 +185,22 @@
     (def got (%zm-source))
     (if (eq? got (lit tick)) (self) got)))
 
-; What comes next for a read whose timer is tenths (0: none): what
-; read_char left, else the source's next line, a tick, or () at the end of
-; input.
+; What comes next for a read with a timer (tenths . routine), tenths 0 for
+; none: what read_char left, else the source's next line, a tick, or () at
+; the end of input.  At a terminal the line editor keeps the time itself,
+; so the timer goes to it with the line.
 (def %zm-next-input
-  (fn (_ tenths)
+  (fn (_ timer)
+    (def tenths (first timer))
     (match
       ((not (null? %zm-pending)) (%zm-take-pending))
+      ((eq? %zm-source %zm-edited-line) (do (set! %zm-line-timer timer) (%zm-source)))
       ((zm= tenths 0) (%zm-source-line))
       ((null? %zm-key-fd) (%zm-source))
       ((not (%zm-key-ready? tenths)) (lit tick))
       (#t (%zm-source)))))
 
-(def %zm-next-line (fn (_) (%zm-next-input 0)))
+(def %zm-next-line (fn (_) (%zm-next-input %zm-no-timer)))
 
 ; Whether a key comes at the terminal within tenths.  The terminal is raw
 ; for the wait: cooked, it would hand over nothing until Return and echo
@@ -169,7 +221,7 @@
 (def %zm-stopped (list (lit stopped)))
 (def %zm-timed
   (fn (self timer next)
-    (def got (next (first timer)))
+    (def got (next timer))
     (if (eq? got (lit tick))
       (do
         (def r (zm-call-now (rest timer)))
@@ -219,6 +271,7 @@
           ((null? line) ())
           ((eq? line %zm-stopped) (pair 0 typed))
           ((eq? (first line) #t) (pair 13 (List append typed (rest line))))
+          ((zm= (first line) 0) (pair 0 (List append typed (rest line))))
           ((%zm-terminator? (first line)) (pair (first line) (List append typed (rest line))))
           (#t (self (List append typed (rest line)))))))
     (def got (go ()))
@@ -371,10 +424,7 @@
       ((eq? k (lit backspace)) 8)
       ((eq? k (lit delete)) 8)
       ((eq? k (lit escape)) 27)
-      ((eq? k (lit up)) 129)
-      ((eq? k (lit down)) 130)
-      ((eq? k (lit left)) 131)
-      ((eq? k (lit right)) 132)
+      ((not (null? (%zm-fkey-zscii k))) (%zm-fkey-zscii k))
       ((eq? k (lit tab)) 9)
       ((eq? k (lit eof)) ())
       ((eq? k (lit interrupt)) ())
@@ -399,7 +449,8 @@
 ; keys as typed: one character a read_char, then Return (13) -- or the key
 ; that ended the line; what it leaves, a line read takes.
 (def %zm-next-key
-  (fn (_ tenths)
+  (fn (_ timer)
+    (def tenths (first timer))
     (if (null? %zm-key-fd)
       (do
         (zm-before-read!)

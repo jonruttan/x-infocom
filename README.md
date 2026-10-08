@@ -79,22 +79,24 @@ kept between games in `x/infocom-history` under `$XDG_STATE_HOME`
 (`~/.local/state` when that is not set), or where `--history` says.
 
 Reads with a timer (version 4 on: a time in tenths of a second and a
-routine) call the routine each time that long passes with nothing typed,
-and stop when it returns true.  On a terminal the time passes while the
-prompt waits for the first key; once a command is being typed, the line
-editor has it until Return.  Through a pipe no time passes between lines;
-a script for `zm-play` says it does with the symbol `tick` among its
-commands.
+routine) call the routine each time that long passes without a key, and
+stop when it returns true.  On a terminal that is while a command is being
+typed too: the line is drawn again after the routine, with what was typed
+so far.  Through a pipe no time passes between lines; a script for
+`zm-play` says it does with the symbol `tick` among its commands.
 
 A version 5 story can name keys besides Return that end a read -- the
 arrows, function keys and keypad -- and `aread` stores which one did; a
-key the story does not name is passed over.  A script line for `zm-play`
-ended by a key is a pair, `(text . key)`, the key by its ZSCII.  At a
-terminal, Return alone ends a line.
+key the story does not name is passed over.  On a terminal a key the
+story names is taken ahead of the line editor's own use of it: an arrow
+the story asks for ends the line rather than browsing the history.  A
+script line for `zm-play` ended by a key is a pair, `(text . key)`, the
+key by its ZSCII.
 
-On a terminal, `read_char` takes a single key (the arrows as ZSCII
-129-132); elsewhere a line is the keys typed for it, one a `read_char`,
-then Return, and what `read_char` leaves of a line the next read takes.
+On a terminal, `read_char` takes a single key (the arrows, function keys
+and keypad as ZSCII 129-154); elsewhere a line is the keys typed for it,
+one a `read_char`, then Return, and what `read_char` leaves of a line the
+next read takes.
 
 ## Tools
 
