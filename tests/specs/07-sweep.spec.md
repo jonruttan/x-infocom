@@ -60,6 +60,19 @@ the machine ran their bytes until it met an opcode that does not exist.
 ---
     #<err:infocom not a Z-machine story file (version byte 5d)>
 
+### a file shorter than the header is refused before the header is written
+
+The interpreter writes its own fields into the header as a story loads;
+in a file shorter than the header's 64 bytes, those writes land past its
+end.
+
+```infocom
+(File write-all "/tmp/x-infocom-short-story.z5" "\x05 a version byte, then too little")
+(guard (e (display e)) (zm-start! "/tmp/x-infocom-short-story.z5"))
+```
+---
+    #<err:infocom not a Z-machine story file (shorter than its header)>
+
 ## read_char away from a terminal
 
 ### lines are keys as typed: a character at a time, Return at the end
