@@ -88,7 +88,8 @@
 ; What the interpreter says about itself in the header, by screen.  The
 ; plain screen: no status line or split, no styles, an unbounded height.
 ; The terminal: the status line and a split (before version 4); bold,
-; italic and fixed pitch (from 4); the window's own size.
+; italic and fixed pitch (from 4); the window's own size.  Either: timed
+; input (from 4).
 (def %zm-header-set!
   (fn (_)
     (def width (if (zm< 0 %zm-width) %zm-width 80))
@@ -97,7 +98,8 @@
       (zm-wb! 1 (zm| (zm& (zm-rb 1) (zm^ 255 (zm| 16 (zm| 32 64))))
                      (if zm-ansi? 32 0)))
       (do
-        (zm-wb! 1 (if zm-ansi? 28 0))
+        ; bit 7, timed input, on either screen
+        (zm-wb! 1 (zm| 128 (if zm-ansi? 28 0)))
         (zm-wb! 32 height)
         (zm-wb! 33 width)
         (if (zm< zm-version 5) ()

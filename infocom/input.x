@@ -94,43 +94,99 @@
           (do
             (def s (first left))
             (set! left (rest left))
-            (pair #t (%zm-codes-of s))))))))
+            (if (str? s) (pair #t (%zm-codes-of s)) s)))))))
 
-; The next line, lower-cased and cut to max characters, as (#t . codes) --
-; an empty line is (#t) -- or () at end of input.
-;
 ; What read_char left of a line: the characters still to come, Return (13)
 ; last.  A line read takes them before the source's next line, as a
 ; terminal hands over the rest of what was typed.
 (def %zm-pending ())
 
-(def %zm-next-line
+(def %zm-take-pending
   (fn (_)
-    (if (null? %zm-pending) (%zm-source)
+    (def take (fn (self cs) (if (if (null? cs) #t (zm= (first cs) 13)) () (pair (first cs) (self (rest cs))))))
+    (def drop (fn (self cs) (if (null? cs) () (if (zm= (first cs) 13) (rest cs) (self (rest cs))))))
+    (def line (take %zm-pending))
+    (set! %zm-pending (drop %zm-pending))
+    (pair #t line)))
+
+; Time passing is a tick: a script says so with the symbol tick among its
+; lines, and a terminal when a read's tenths pass with nothing typed; a
+; pipe has no time between its lines.  Only a timed read has a use for a
+; tick, so the source's next line is taken past any.
+(def %zm-source-line
+  (fn (self)
+    (def got (%zm-source))
+    (if (eq? got (lit tick)) (self) got)))
+
+; What comes next for a read whose timer is tenths (0: none): what
+; read_char left, else the source's next line, a tick, or () at the end of
+; input.
+(def %zm-next-input
+  (fn (_ tenths)
+    (match
+      ((not (null? %zm-pending)) (%zm-take-pending))
+      ((zm= tenths 0) (%zm-source-line))
+      ((null? %zm-key-fd) (%zm-source))
+      ((not (%zm-key-ready? tenths)) (lit tick))
+      (#t (%zm-source)))))
+
+(def %zm-next-line (fn (_) (%zm-next-input 0)))
+
+; Whether a key comes at the terminal within tenths.  The terminal is raw
+; for the wait: cooked, it would hand over nothing until Return and echo
+; keys in its own way, an arrow as ^[[A.  The key stays unread for the
+; read that follows.
+(def %zm-key-ready?
+  (fn (_ tenths)
+    (def saved (Term raw-with-signals! %zm-key-fd))
+    (def r (Sys poll (list (pair %zm-key-fd (list (lit in)))) (zm* tenths 100)))
+    (Term restore! %zm-key-fd saved)
+    (not (null? r))))
+
+; A timer is (tenths . routine): each time a tick comes the routine is
+; called, and when it answers true the read stops.  Answers what took the
+; read: %zm-stopped when the routine stopped it, else the next input (never a
+; tick), or () at the end of input or when the story quits in the routine.
+(def %zm-no-timer (pair 0 0))
+(def %zm-stopped (list (lit stopped)))
+(def %zm-timed
+  (fn (self timer next)
+    (def got (next (first timer)))
+    (if (eq? got (lit tick))
       (do
-        (def take (fn (self cs) (if (if (null? cs) #t (zm= (first cs) 13)) () (pair (first cs) (self (rest cs))))))
-        (def drop (fn (self cs) (if (null? cs) () (if (zm= (first cs) 13) (rest cs) (self (rest cs))))))
-        (def line (take %zm-pending))
-        (set! %zm-pending (drop %zm-pending))
-        (pair #t line)))))
+        (def r (zm-call-now (rest timer)))
+        (zm-before-read!)
+        (zm-flush)
+        (match
+          ((null? r) ())
+          ((zm= r 0) (self timer next))
+          (#t %zm-stopped)))
+      got)))
 
 ; Nothing collects unless asked, and every instruction allocates; a read is
 ; where the machine is quiet -- the turn's work is done and the next has
 ; not begun -- so the sweep goes here, as the REPL's goes at its prompt.
+;
+; The next line, lower-cased and cut to max characters, as (#t . codes) --
+; an empty line is (#t) -- %zm-stopped when the timer's routine stopped
+; the read, or () at the end of input.
 (def zm-read-line
-  (fn (_ max)
+  (fn (_ max . timer)
     (zm-before-read!)
     (zm-flush)
     (Heap collect)
-    (def line (%zm-next-line))
-    (if (null? line) ()
-      (do
-        (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
-        (def cut
-          (fn (self cs n)
-            (if (if (null? cs) #t (zm= n 0)) ()
-              (pair (%zm-lower (first cs)) (self (rest cs) (zm- n 1))))))
-        (pair #t (cut (rest line) max))))))
+    (def line (%zm-timed (if (null? timer) %zm-no-timer (first timer)) %zm-next-input))
+    (match
+      ((null? line) ())
+      ((eq? line %zm-stopped) line)
+      (#t
+        (do
+          (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
+          (def cut
+            (fn (self cs n)
+              (if (if (null? cs) #t (zm= n 0)) ()
+                (pair (%zm-lower (first cs)) (self (rest cs) (zm- n 1))))))
+          (pair #t (cut (rest line) max)))))))
 
 ; The next line as typed, for a file name: (#t . codes), or ().
 (def zm-read-raw-line
@@ -292,23 +348,43 @@
     (Term restore! fd saved)
     (%zm-key-zscii k)))
 
-; read_char's character, or () at end of input.  Away from a terminal the
-; lines are keys as typed: one character a read_char, then Return (13) for
-; the end of the line; what it leaves, a line read takes.
-(def zm-read-char
-  (fn (_)
+; The next key for a read_char whose timer is tenths (0: none): its ZSCII,
+; a tick, or () at the end of input.  Away from a terminal the lines are
+; keys as typed: one character a read_char, then Return (13) for the end of
+; the line; what it leaves, a line read takes.
+(def %zm-next-key
+  (fn (_ tenths)
     (if (null? %zm-key-fd)
       (do
         (zm-before-read!)
         (zm-flush)
-        (if (null? %zm-pending)
-          (do
-            (def line (%zm-source))
-            (if (null? line) ()
-              (set! %zm-pending (List append (rest line) (list 13))))))
-        (if (null? %zm-pending) ()
-          (do
-            (def c (first %zm-pending))
-            (set! %zm-pending (rest %zm-pending))
-            c)))
-      (%zm-read-key %zm-key-fd))))
+        (def line
+          (match
+            ((not (null? %zm-pending)) ())
+            ((zm= tenths 0) (%zm-source-line))
+            (#t (%zm-source))))
+        (match
+          ((eq? line (lit tick)) line)
+          ((not (null? line)) (set! %zm-pending (List append (rest line) (list 13)))))
+        (match
+          ((eq? line (lit tick)) line)
+          ((null? %zm-pending) ())
+          (#t
+            (do
+              (def c (first %zm-pending))
+              (set! %zm-pending (rest %zm-pending))
+              c))))
+      (do
+        (zm-before-read!)
+        (zm-flush)
+        (if (if (zm= tenths 0) #f
+              (not (%zm-key-ready? tenths)))
+          (lit tick)
+          (%zm-read-key %zm-key-fd))))))
+
+; read_char's character: 0 when the timer's routine stopped the read, or ()
+; at the end of input.
+(def zm-read-char
+  (fn (_ . timer)
+    (def c (%zm-timed (if (null? timer) %zm-no-timer (first timer)) %zm-next-key))
+    (if (eq? c %zm-stopped) 0 c)))
