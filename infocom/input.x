@@ -83,6 +83,9 @@
           (%zm-rev acc))))
     (go 0 ())))
 
+; A script's lines are strings, each typed and ended with Return; a pair
+; (text . key) is text typed and ended with a key instead -- a function key
+; or an arrow, by its ZSCII; and the symbol tick is time passing.
 (def zm-input-script!
   (fn (_ lines)
     (def left lines)
@@ -94,20 +97,35 @@
           (do
             (def s (first left))
             (set! left (rest left))
-            (if (str? s) (pair #t (%zm-codes-of s)) s)))))))
+            (match
+              ((str? s) (pair #t (%zm-codes-of s)))
+              ((eq? s (lit tick)) s)
+              (#t (pair (rest s) (%zm-codes-of (first s)))))))))))
 
-; What read_char left of a line: the characters still to come, Return (13)
-; last.  A line read takes them before the source's next line, as a
-; terminal hands over the rest of what was typed.
+; A line from a source is (end . codes): end is #t for Return, or the
+; ZSCII of the key that ended it.
+;
+; The keys that can end a line other than Return: the arrows and function
+; keys 129-154, and the mouse and menu clicks 252-254.
+(def %zm-function-key?
+  (fn (_ c) (if (if (zm< c 129) #f (zm< c 155)) #t (if (zm< c 252) #f (zm< c 255)))))
+
+; What read_char left of a line: the characters still to come, then what
+; ended it -- Return (13) or a function key.  A line read takes them before
+; the source's next line, as a terminal hands over the rest of what was
+; typed.
 (def %zm-pending ())
 
 (def %zm-take-pending
   (fn (_)
-    (def take (fn (self cs) (if (if (null? cs) #t (zm= (first cs) 13)) () (pair (first cs) (self (rest cs))))))
-    (def drop (fn (self cs) (if (null? cs) () (if (zm= (first cs) 13) (rest cs) (self (rest cs))))))
+    (def end? (fn (_ c) (if (zm= c 13) #t (%zm-function-key? c))))
+    (def take (fn (self cs) (if (if (null? cs) #t (end? (first cs))) () (pair (first cs) (self (rest cs))))))
+    (def ender (fn (self cs) (if (null? cs) 13 (if (end? (first cs)) (first cs) (self (rest cs))))))
+    (def drop (fn (self cs) (if (null? cs) () (if (end? (first cs)) (rest cs) (self (rest cs))))))
     (def line (take %zm-pending))
+    (def end (ender %zm-pending))
     (set! %zm-pending (drop %zm-pending))
-    (pair #t line)))
+    (pair (if (zm= end 13) #t end) line)))
 
 ; Time passing is a tick: a script says so with the symbol tick among its
 ; lines, and a terminal when a read's tenths pass with nothing typed; a
@@ -163,30 +181,58 @@
           (#t %zm-stopped)))
       got)))
 
+; Whether key ends a read: the story's terminating characters (version 5
+; on) are a zero-ended table of ZSCII at the header's word 0x2E, 255 among
+; them standing for every function key.
+(def %zm-terminator?
+  (fn (_ key)
+    (def t (if (zm< zm-version 5) 0 (zm-rw 46)))
+    (def go
+      (fn (self a)
+        (def b (zm-rb a))
+        (match
+          ((zm= b 0) #f)
+          ((zm= b key) #t)
+          ((zm= b 255) #t)
+          (#t (self (zm+ a 1))))))
+    (if (zm= t 0) #f (go t))))
+
 ; Nothing collects unless asked, and every instruction allocates; a read is
 ; where the machine is quiet -- the turn's work is done and the next has
 ; not begun -- so the sweep goes here, as the REPL's goes at its prompt.
 ;
-; The next line, lower-cased and cut to max characters, as (#t . codes) --
-; an empty line is (#t) -- %zm-stopped when the timer's routine stopped
-; the read, or () at the end of input.
+; The next line, lower-cased and cut to max characters, as (terminator .
+; codes): the terminator Return (13), a terminating key, or 0 when the
+; timer's routine stopped the read; or () at the end of input.  A function
+; key the story does not name ends nothing: what was typed stays, and the
+; line goes on.
 (def zm-read-line
   (fn (_ max . timer)
     (zm-before-read!)
     (zm-flush)
     (Heap collect)
-    (def line (%zm-timed (if (null? timer) %zm-no-timer (first timer)) %zm-next-input))
-    (match
-      ((null? line) ())
-      ((eq? line %zm-stopped) line)
-      (#t
-        (do
-          (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
-          (def cut
-            (fn (self cs n)
-              (if (if (null? cs) #t (zm= n 0)) ()
-                (pair (%zm-lower (first cs)) (self (rest cs) (zm- n 1))))))
-          (pair #t (cut (rest line) max)))))))
+    (def t (if (null? timer) %zm-no-timer (first timer)))
+    (def go
+      (fn (self typed)
+        (def line (%zm-timed t %zm-next-input))
+        (match
+          ((null? line) ())
+          ((eq? line %zm-stopped) (pair 0 typed))
+          ((eq? (first line) #t) (pair 13 (List append typed (rest line))))
+          ((%zm-terminator? (first line)) (pair (first line) (List append typed (rest line))))
+          (#t (self (List append typed (rest line)))))))
+    (def got (go ()))
+    (if (null? got) ()
+      (do
+        (match
+          ((zm= (first got) 0) ())
+          (%zm-echo? (do (zm-out-codes (rest got)) (zm-out-zscii 13)))
+          (#t (zm-col-reset!)))
+        (def cut
+          (fn (self cs n)
+            (if (if (null? cs) #t (zm= n 0)) ()
+              (pair (%zm-lower (first cs)) (self (rest cs) (zm- n 1))))))
+        (pair (first got) (cut (rest got) max))))))
 
 ; The next line as typed, for a file name: (#t . codes), or ().
 (def zm-read-raw-line
@@ -350,8 +396,8 @@
 
 ; The next key for a read_char whose timer is tenths (0: none): its ZSCII,
 ; a tick, or () at the end of input.  Away from a terminal the lines are
-; keys as typed: one character a read_char, then Return (13) for the end of
-; the line; what it leaves, a line read takes.
+; keys as typed: one character a read_char, then Return (13) -- or the key
+; that ended the line; what it leaves, a line read takes.
 (def %zm-next-key
   (fn (_ tenths)
     (if (null? %zm-key-fd)
@@ -365,7 +411,8 @@
             (#t (%zm-source))))
         (match
           ((eq? line (lit tick)) line)
-          ((not (null? line)) (set! %zm-pending (List append (rest line) (list 13)))))
+          ((not (null? line))
+            (set! %zm-pending (List append (rest line) (list (if (eq? (first line) #t) 13 (first line)))))))
         (match
           ((eq? line (lit tick)) line)
           ((null? %zm-pending) ())
