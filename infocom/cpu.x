@@ -16,7 +16,7 @@
 
 (provide infocom/cpu
   zm-push zm-pop zm-var zm-var-set! zm-var-peek zm-var-poke!
-  zm-call zm-return zm-throw zm-frame-id zm-argc zm-cpu-reset!
+  zm-call zm-call-now zm-return zm-throw zm-frame-id zm-argc zm-cpu-reset!
   zm-random)
 
 (def %zm-stack-size 32768)
@@ -137,13 +137,29 @@
     (set! %zm-nlocals (first (rest (rest (rest r)))))
     (pair (first f) (first (rest f)))))
 
-; Return v from the running routine: answers the caller's pc.
+; Return v from the running routine: answers the caller's pc.  A routine
+; called now (zm-call-now) has the store %zm-now-pc, and its value is kept
+; in %zm-now-value instead.
 (def zm-return
   (fn (_ v)
     (if (null? %zm-frames) (Err raise (lit infocom) "return from the main routine" v))
     (def back (%zm-pop-frame!))
-    (if (zm< (rest back) 0) () (zm-var-set! (rest back) v))
+    (match
+      ((zm= (rest back) %zm-now-pc) (set! %zm-now-value v))
+      ((zm< (rest back) 0) ())
+      (#t (zm-var-set! (rest back) v)))
     (first back)))
+
+; Run the routine at packed address paddr to its return, in the middle of
+; an instruction -- a read's timer routine is called this way -- and answer
+; what it returns, or () when the story quits inside it.  The routine comes
+; back to %zm-now-pc, a pc the run loop stops at.
+(def %zm-now-pc -2)
+(def %zm-now-value 0)
+(def zm-call-now
+  (fn (_ paddr)
+    (set! %zm-now-value 0)
+    (if (zm= (zm-run (zm-call paddr () %zm-now-pc %zm-now-pc)) %zm-now-pc) %zm-now-value ())))
 
 ; catch answers the current frame's identity; throw returns from it.
 (def zm-frame-id (fn (_) (%zm-length %zm-frames)))

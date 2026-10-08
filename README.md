@@ -40,7 +40,8 @@ Not served yet:
 
 - the auxiliary saves and restores of a table;
 - sound, fonts and colours; text styles on the plain screen;
-- the timed and terminating-character forms of input.
+- terminating characters other than Return (the function keys a version 5
+  story can ask to end a read).
 
 ## The command line
 
@@ -78,6 +79,14 @@ move along it and back through the commands typed before, ctrl-r searches
 them, ctrl-d on an empty line or ctrl-c ends the game.  The commands are
 kept between games in `x/infocom-history` under `$XDG_STATE_HOME`
 (`~/.local/state` when that is not set), or where `--history` says.
+
+Reads with a timer (version 4 on: a time in tenths of a second and a
+routine) call the routine each time that long passes with nothing typed,
+and stop when it returns true.  On a terminal the time passes while the
+prompt waits for the first key; once a command is being typed, the line
+editor has it until Return.  Through a pipe no time passes between lines;
+a script for `zm-play` says it does with the symbol `tick` among its
+commands.
 
 On a terminal, `read_char` takes a single key (the arrows as ZSCII
 129-132); elsewhere a line is the keys typed for it, one a `read_char`,

@@ -78,34 +78,35 @@
     zm-hdr-pc))
 
 
+; A read's line, with its timer (tenths . routine), into the text buffer
+; t by put, and tokenised into p: answers the terminator -- Return (13), or
+; 0 when the timer's routine stopped the read with nothing typed -- or ()
+; at the end of input.
+(def %zm-read-into
+  (fn (_ t p max timer put)
+    (def line (zm-read-line max timer))
+    (if (null? line) ()
+      (do
+        (def stopped? (eq? line %zm-stopped))
+        (put (if stopped? () (rest line)) 0)
+        (if (zm= p 0) () (zm-tokenise! t p 0 #f))
+        (if stopped? 0 13)))))
+
 ; sread (versions 1 to 4): text from byte 1, ended by a zero byte.
 (def zm-sread
-  (fn (_ t p)
-    (def line (zm-read-line (zm- (zm-rb t) 1)))
-    (if (null? line) #f
-      (do
-        (def put
-          (fn (self cs i)
-            (if (null? cs) (zm-wb! (zm+ (zm+ t 1) i) 0)
-              (do (zm-wb! (zm+ (zm+ t 1) i) (first cs)) (self (rest cs) (zm+ i 1))))))
-        (put (rest line) 0)
-        (if (zm= p 0) () (zm-tokenise! t p 0 #f))
-        #t))))
+  (fn (_ t p timer)
+    (%zm-read-into t p (zm- (zm-rb t) 1) timer
+      (fn (self cs i)
+        (if (null? cs) (zm-wb! (zm+ (zm+ t 1) i) 0)
+          (do (zm-wb! (zm+ (zm+ t 1) i) (first cs)) (self (rest cs) (zm+ i 1))))))))
 
 ; aread (version 5 on): the count in byte 1, text from byte 2.
 (def zm-aread
-  (fn (_ t p)
-    (def line (zm-read-line (zm-rb t)))
-    (if (null? line) #f
-      (do
-        (def put
-          (fn (self cs i)
-            (if (null? cs) (zm-wb! (zm+ t 1) i)
-              (do (zm-wb! (zm+ (zm+ t 2) i) (first cs)) (self (rest cs) (zm+ i 1))))))
-        (put (rest line) 0)
-        (if (zm= p 0) () (zm-tokenise! t p 0 #f))
-        #t))))
-
+  (fn (_ t p timer)
+    (%zm-read-into t p (zm-rb t) timer
+      (fn (self cs i)
+        (if (null? cs) (zm-wb! (zm+ t 1) i)
+          (do (zm-wb! (zm+ (zm+ t 2) i) (first cs)) (self (rest cs) (zm+ i 1))))))))
 
 (def zm-scan-table
   (fn (_ x t n form)

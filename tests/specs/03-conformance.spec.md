@@ -45,8 +45,8 @@ Misc [401]: test...random.verify.piracy.
 Header (No tests)
     standard 1.1
     interpreter 6 I (IBM PC)
-    Flags on:
-    Flags off: color, pictures, boldface, italic, fixed-space, sound, timer,
+    Flags on: timer,
+    Flags off: color, pictures, boldface, italic, fixed-space, sound,
 transcripting on, fixed-pitch on, redraw pending, using pictures, using undo,
 using mouse, using colors, using sound, using menus,
     Screen size: 80x255; in 1x1 units: 80x255
