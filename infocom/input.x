@@ -13,10 +13,11 @@
 ; would show it.
 
 (import x/repl/term)
+(import x/repl/line)
 
 (provide infocom/input
   zm-input-fd! zm-input-script! zm-read-line zm-read-raw-line zm-read-char
-  zm-echo! zm-tokenise! zm-lookup)
+  zm-echo! zm-tokenise! zm-lookup zm-history!)
 
 (def %zm-source ())
 (def %zm-echo? #f)
@@ -25,20 +26,52 @@
 (def zm-input-fd!
   (fn (_ fd)
     (set! %zm-echo? #f)
+    (set! %zm-pending ())
     (set! %zm-key-fd (if (Term tty? fd) fd ()))
     (set! %zm-ibuf (%zm-str-make 1))
+    (Line fd fd)
     (set! %zm-source
-      (fn (_)
-        (def go
-          (fn (self acc)
-            (def n (zm-file-read fd %zm-ibuf 1))
-            (if (zm< n 1)
-              (if (null? acc) () (pair #t (%zm-rev acc)))
-              (do
-                (def c (zm& (%zm-pref (%zm-str->ptr %zm-ibuf) 0 1) 255))
-                (if (zm= c 10) (pair #t (%zm-rev acc))
-                  (if (zm= c 13) (self acc) (self (pair c acc))))))))
-        (go ())))))
+      (if (Line available?) %zm-edited-line
+        (fn (_)
+          (def go
+            (fn (self acc)
+              (def n (zm-file-read fd %zm-ibuf 1))
+              (if (zm< n 1)
+                (if (null? acc) () (pair #t (%zm-rev acc)))
+                (do
+                  (def c (zm& (%zm-pref (%zm-str->ptr %zm-ibuf) 0 1) 255))
+                  (if (zm= c 10) (pair #t (%zm-rev acc))
+                    (if (zm= c 13) (self acc) (self (pair c acc))))))))
+          (go ()))))))
+
+; A line typed at a terminal, through x-lang's line editor: the arrows move
+; and browse the commands typed before, ctrl-r searches them.  The editor's
+; redraw starts its row over, so the row the story has printed -- its prompt
+; -- is handed to it as the prompt.  The painter and Tab's completer are
+; x-lang's; a command is not x, so neither runs.  ctrl-d on an empty line
+; and ctrl-c end the input.
+(def %zm-edited-line
+  (fn (_)
+    (set! %repl-paint ())
+    (set! %repl-marks ())
+    (Line completer ())
+    (def s (Line read (zm-row-str)))
+    (if (str? s) (pair #t (%zm-codes-of s)) ())))
+
+; Where the commands typed are kept: FILE, or nowhere when FILE is empty;
+; by default x/infocom-history under the XDG state directory.  Set before
+; the first line, as the editor loads its history then.
+(def zm-history!
+  (fn (_ file)
+    (def state (Sys getenv "XDG_STATE_HOME"))
+    (def home (Sys getenv "HOME"))
+    (def path
+      (match
+        ((not (null? file)) file)
+        ((not (null? state)) (Str8 append state "/x/infocom-history"))
+        ((not (null? home)) (Str8 append home "/.local/state/x/infocom-history"))
+        (#t "")))
+    (Sys setenv "X_HISTORY" path)))
 
 (def %zm-codes-of
   (fn (_ s)
@@ -54,6 +87,7 @@
   (fn (_ lines)
     (def left lines)
     (set! %zm-echo? #t)
+    (set! %zm-pending ())
     (set! %zm-source
       (fn (_)
         (if (null? left) ()
@@ -65,6 +99,21 @@
 ; The next line, lower-cased and cut to max characters, as (#t . codes) --
 ; an empty line is (#t) -- or () at end of input.
 ;
+; What read_char left of a line: the characters still to come, Return (13)
+; last.  A line read takes them before the source's next line, as a
+; terminal hands over the rest of what was typed.
+(def %zm-pending ())
+
+(def %zm-next-line
+  (fn (_)
+    (if (null? %zm-pending) (%zm-source)
+      (do
+        (def take (fn (self cs) (if (if (null? cs) #t (zm= (first cs) 13)) () (pair (first cs) (self (rest cs))))))
+        (def drop (fn (self cs) (if (null? cs) () (if (zm= (first cs) 13) (rest cs) (self (rest cs))))))
+        (def line (take %zm-pending))
+        (set! %zm-pending (drop %zm-pending))
+        (pair #t line)))))
+
 ; Nothing collects unless asked, and every instruction allocates; a read is
 ; where the machine is quiet -- the turn's work is done and the next has
 ; not begun -- so the sweep goes here, as the REPL's goes at its prompt.
@@ -73,7 +122,7 @@
     (zm-before-read!)
     (zm-flush)
     (Heap collect)
-    (def line (%zm-source))
+    (def line (%zm-next-line))
     (if (null? line) ()
       (do
         (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
@@ -88,7 +137,7 @@
   (fn (_)
     (zm-before-read!)
     (zm-flush)
-    (def line (%zm-source))
+    (def line (%zm-next-line))
     (if (null? line) ()
       (do
         (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
@@ -243,11 +292,23 @@
     (Term restore! fd saved)
     (%zm-key-zscii k)))
 
-; read_char's character, or () at end of input.
+; read_char's character, or () at end of input.  Away from a terminal the
+; lines are keys as typed: one character a read_char, then Return (13) for
+; the end of the line; what it leaves, a line read takes.
 (def zm-read-char
   (fn (_)
     (if (null? %zm-key-fd)
       (do
-        (def line (zm-read-line 1))
-        (if (null? line) () (if (null? (rest line)) 13 (first (rest line)))))
+        (zm-before-read!)
+        (zm-flush)
+        (if (null? %zm-pending)
+          (do
+            (def line (%zm-source))
+            (if (null? line) ()
+              (set! %zm-pending (List append (rest line) (list 13))))))
+        (if (null? %zm-pending) ()
+          (do
+            (def c (first %zm-pending))
+            (set! %zm-pending (rest %zm-pending))
+            c)))
       (%zm-read-key %zm-key-fd))))

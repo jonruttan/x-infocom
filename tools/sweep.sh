@@ -49,14 +49,14 @@ run_ours() {
 	if [ -f "$guard" ]; then
 		GUARD_START="${GUARD_START:-30}" X_LANG_DIR="$langs/" \
 			sh "$guard" "${SWEEP_MB:-2000}" "${SWEEP_SECS:-60}" -- \
-			"$X" -l infocom -- --plain "$1" < "$cmds" 2>&1
+			"$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
 	else
-		X_LANG_DIR="$langs/" "$X" -l infocom -- --plain "$1" < "$cmds" 2>&1
+		X_LANG_DIR="$langs/" "$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
 	fi
 }
 
 printf '%-40s %s\n' story verdict > "$out/summary.txt"
-find "$dir" -type f \( -iname '*.z3' -o -iname '*.z4' -o -iname '*.z5' -o -iname '*.z8' \) |
+find -L "$dir" -type f \( -iname '*.z3' -o -iname '*.z4' -o -iname '*.z5' -o -iname '*.z8' \) |
 	sort | while IFS= read -r story; do
 	name="$(basename "$story")"
 	key="$(printf '%s' "$story" | cksum | cut -d' ' -f1)-$name"

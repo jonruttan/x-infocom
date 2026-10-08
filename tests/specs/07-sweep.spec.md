@@ -59,3 +59,26 @@ the machine ran their bytes until it met an opcode that does not exist.
 ```
 ---
     #<err:infocom not a Z-machine story file (version byte 5d)>
+
+## read_char away from a terminal
+
+### lines are keys as typed: a character at a time, Return at the end
+
+Curses waits at its title for Space or Return: taking each line's first
+character, read_char threw a line away a key and never saw Return.  A
+line is the keys typed for it, and what read_char leaves, a line read
+takes.
+
+```infocom
+(zm-input-script! (list "ab" "cd" "ef"))
+(zm-start! (zm-story "zork1.z3"))
+(def %rk-1 (zm-read-char))
+(def %rk-2 (zm-read-char))
+(def %rk-3 (zm-read-char))
+(def %rk-4 (zm-read-char))
+(def %rk-line (zm-read-line 10))
+(zm-flush)
+(write (list %rk-1 %rk-2 %rk-3 %rk-4 (rest %rk-line)))
+```
+---
+    (97 98 13 99 (100))

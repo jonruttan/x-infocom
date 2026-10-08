@@ -27,6 +27,7 @@ Play:
 	-r,--restore FILE	Begin from a saved game
 	-S,--save-dir DIR	Put save files in DIR
 	-e,--echo		Echo each command read, as a transcript shows it
+	-H,--history FILE	Keep the commands typed at a terminal in FILE (empty: nowhere)
 Describe, then stop:
 	-i,--info		The header
 	-o,--objects		The objects, attributes and properties
@@ -41,7 +42,7 @@ Describe, then stop:
 ```infocom
 (write (zm-cli-plan (list "z.z3")))
 (newline)
-(write (zm-cli-plan (list "-p" "-w" "60" "-s" "7" "--restore" "a.qzl" "-S" "/tmp" "-e" "z.z3")))
+(write (zm-cli-plan (list "-p" "-w" "60" "-s" "7" "--restore" "a.qzl" "-S" "/tmp" "-e" "-H" "h" "z.z3")))
 (newline)
 (write (zm-cli-plan (list "-i" "--tree" "-D" "0x4f05" "z.z3")))
 (newline)
@@ -49,8 +50,8 @@ Describe, then stop:
 ```
 ---
 ```output
-('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f)))
-('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f)))
+('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f) ('history)))
+('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f) ('history . "h")))
 ('describe "z.z3" ('info 'tree ('dis . 20229)))
 (('refuse ()) ('refuse "unrecognized option '-z'") ('refuse "one story at a time") ('refuse "--width takes a number") ('help) ('help))
 ```
