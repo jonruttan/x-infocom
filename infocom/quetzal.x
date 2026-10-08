@@ -23,7 +23,8 @@
 ; then finishes the save instruction as a success: before version 4 by
 ; taking its branch, after it by storing 2.
 
-(provide infocom/quetzal zm-save zm-restore zm-restore-file zm-save-dir!)
+(provide infocom/quetzal zm-save zm-restore zm-restore-file zm-save-dir!
+  zm-save-table zm-restore-table)
 
 (def %zm-save-dir "")
 (def zm-save-dir! (fn (_ dir) (set! %zm-save-dir dir)))
@@ -128,21 +129,29 @@
 (def %qz-default ())
 
 ; The file to use: asked for, as dfrotz asks, offering the last name given
-; (the story's name in .qzl at first); a relative name is under the save
-; directory.
+; (the story's name in .qzl at first), or the name given here; a relative
+; name is under the save directory.
 (def %qz-ask-file
-  (fn (_)
-    (def dflt (if (null? %qz-default) (Str8 append %zm-story-name ".qzl") %qz-default))
-    (zm-out-ascii (Str8 append "Please enter a filename [" (Str8 append dflt "]: ")))
+  (fn (_ . given)
+    (def dflt
+      (match
+        ((not (null? given)) (first given))
+        ((null? %qz-default) (Str8 append %zm-story-name ".qzl"))
+        (#t %qz-default)))
+    (zm-out-ascii (Str8 append "Please enter a filename [" dflt "]: "))
     (def line (zm-read-raw-line))
     (if (null? line) ()
       (do
         (def name (if (null? (rest line)) dflt (%qz-codes->str (rest line))))
-        (set! %qz-default name)
-        (if (if (zm< 0 (%zm-byte-len name)) (zm= (%zm-char->int (%zm-byte-ref name 0)) 47) #f)
-          name
-          (if (zm= (%zm-byte-len %zm-save-dir) 0) name
-            (Str8 append %zm-save-dir (Str8 append "/" name))))))))
+        (if (null? given) (set! %qz-default name))
+        (%qz-in-save-dir name)))))
+
+(def %qz-in-save-dir
+  (fn (_ name)
+    (if (if (zm< 0 (%zm-byte-len name)) (zm= (%zm-char->int (%zm-byte-ref name 0)) 47) #f)
+      name
+      (if (zm= (%zm-byte-len %zm-save-dir) 0) name
+        (Str8 append %zm-save-dir "/" name)))))
 
 (def %qz-write-file
   (fn (_ path bytes)
@@ -318,3 +327,39 @@
                     (def b (%zm-branch-at pc))
                     (%zm-br #t (first b) (rest b)))
                   (do (zm-var-set! (zm-rb pc) 2) (zm+ pc 1)))))))))))
+
+; --- the auxiliary forms -----------------------------------------------------
+; From version 5, save and restore with operands keep a table of the story's
+; own: bytes bytes of memory from table, as they are, in a file of their own.
+; name, when given, is a string in memory -- a length byte, then its
+; characters -- else the story's name in .aux; prompt 0 takes the name as
+; it is, else the name is asked for, offered as the default.
+
+(def %qz-aux-file
+  (fn (_ name prompt?)
+    (def dflt
+      (if (zm= name 0) (Str8 append %zm-story-name ".aux")
+        (do
+          (def n (zm-rb name))
+          (def go (fn (self i acc) (if (zm< i 0) acc (self (zm- i 1) (pair (zm-rb (zm+ (zm+ name 1) i)) acc)))))
+          (%qz-codes->str (go (zm- n 1) ())))))
+    (if prompt? (%qz-ask-file dflt) (%qz-in-save-dir dflt))))
+
+; save table bytes name prompt: 1 when the table is written, else 0.
+(def zm-save-table
+  (fn (_ table n name prompt?)
+    (def path (%qz-aux-file name prompt?))
+    (def go (fn (self i acc) (if (zm< i 0) acc (self (zm- i 1) (pair (zm-rb (zm+ table i)) acc)))))
+    (if (null? path) 0 (if (%qz-write-file path (go (zm- n 1) ())) 1 0))))
+
+; restore table bytes name prompt: how many bytes were read into the
+; table -- the file's length, up to bytes -- or 0 when there is no file.
+(def zm-restore-table
+  (fn (_ table n name prompt?)
+    (def path (%qz-aux-file name prompt?))
+    (if (if (null? path) #t (not (%qz-load path))) 0
+      (do
+        (def m (if (zm< %qz-size n) %qz-size n))
+        (def go (fn (self i) (if (zm< i m) (do (zm-wb! (zm+ table i) (%qz-rb i)) (self (zm+ i 1))))))
+        (go 0)
+        m))))
