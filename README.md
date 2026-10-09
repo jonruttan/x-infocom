@@ -40,6 +40,13 @@ The file name is asked for as dfrotz asks it, offering the last name given.
 The auxiliary forms (version 5 on) keep a table of the story's own as raw
 bytes in a file of its own, named by the story or `<story>.aux`, and
 asked for unless the story says not to.
+
+The transcript is the story's own: `SCRIPT` in an Infocom game, or
+output stream 2, writes the lower window's text and the commands to a
+file until `UNSCRIPT`.  Output stream 4 records the commands typed, and
+input stream 1 plays a file of them back, echoing each, before the
+keyboard takes over; `--record` and `--replay` do the same from the
+command line, so a game recorded once replays as a walk.
 Undo keeps eight levels: save_undo keeps dynamic memory (one block copy),
 the stack and the frames, and restore_undo puts the newest back.
 
@@ -66,6 +73,9 @@ Play:
 | `-S`, `--save-dir DIR` | put save files in DIR |
 | `-e`, `--echo` | echo each command read, as a transcript shows it |
 | `-H`, `--history FILE` | keep the commands typed at a terminal in FILE; empty, nowhere |
+| `-T`, `--transcript FILE` | write the transcript to FILE when the story starts one (else it is asked for) |
+| `-R`, `--record FILE` | record the commands typed in FILE |
+| `-P`, `--replay FILE` | take commands from FILE first, then from the keyboard |
 
 Describe the story, then stop (in the spirit of infodump and txd):
 

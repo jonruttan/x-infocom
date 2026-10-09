@@ -106,6 +106,8 @@
 (def zm-screen-end!
   (fn (_)
     (zm-flush)
+    (zm-script-close!)
+    (zm-record-stop!)
     (if zm-ansi?
       (do
         (%zm-csi "[0m")
