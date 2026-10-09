@@ -37,12 +37,14 @@ tail call an instruction.
 Saving and restoring use Quetzal, the format interpreters share: a save
 from this machine restores in dfrotz, and one from dfrotz restores here.
 The file name is asked for as dfrotz asks it, offering the last name given.
+The auxiliary forms (version 5 on) keep a table of the story's own as raw
+bytes in a file of its own, named by the story or `<story>.aux`, and
+asked for unless the story says not to.
 Undo keeps eight levels: save_undo keeps dynamic memory (one block copy),
 the stack and the frames, and restore_undo puts the newest back.
 
 Not served yet:
 
-- the auxiliary saves and restores of a table;
 - sound and fonts.
 
 ## The command line

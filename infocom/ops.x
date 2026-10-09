@@ -103,6 +103,23 @@
     (fn (_ ops st br tx next) (fn (_) (f) next))))
 
 ; A call: the routine, then its arguments; store -1 for the call_*n forms.
+; The auxiliary save and restore: table, bytes, name and prompt, the last
+; two optional, f's answer stored.
+(def %zm-table-op
+  (fn (_ ops st next f)
+    (def n (%zm-length ops))
+    (def gt (%zm-g ops 0))
+    (def gb (%zm-g ops 1))
+    (def gn (%zm-g ops 2))
+    (def gp (%zm-g ops 3))
+    (fn (_)
+      (def table (gt))
+      (def bytes (gb))
+      (def name (if (zm< n 3) 0 (gn)))
+      (def prompt? (if (zm< n 4) #t (not (zm= (gp) 0))))
+      (zm-var-set! st (f table bytes name prompt?))
+      next)))
+
 (def %zm-caller
   (fn (_ store?)
     (fn (_ ops st br tx next)
@@ -399,18 +416,19 @@
         (%zm-op! 3 31 "check_arg_count" #f #t #f (%zm-branch1 (fn (_ n) (zm< (zm- n 1) zm-argc))))
 
         ; EXT.  save and restore with operands are the auxiliary forms on a
-        ; table, not served: they report failure.
+        ; table: table, bytes, then a name (0 for none) and whether to ask
+        ; for it (asked when the operand is not given).
         (%zm-op! 4 0 "save" #t #f #f
           (fn (_ ops st br tx next)
             (def at (zm- next 1))
             (if (null? ops)
               (fn (_) (zm-var-set! st (if (zm-save at) 1 0)) next)
-              (fn (_) (zm-var-set! st 0) next))))
+              (%zm-table-op ops st next zm-save-table))))
         (%zm-op! 4 1 "restore" #t #f #f
           (fn (_ ops st br tx next)
             (if (null? ops)
               (fn (_) (def pc (zm-restore)) (if (null? pc) (do (zm-var-set! st 0) next) pc))
-              (fn (_) (zm-var-set! st 0) next))))
+              (%zm-table-op ops st next zm-restore-table))))
         (%zm-op! 4 2 "log_shift" #t #f #f
           (%zm-store2
             (fn (_ x p)
