@@ -19,7 +19,7 @@ screen's specs are the ones compared with dfrotz.
 ```
 ---
 ```output
-^[[2J^[[2;1H^[7^[[2;24r^[8^[[2;1HZORK I: The Great Underground Empire
+^[[0m^[[2J^[[2;1H^[7^[[2;24r^[8^[[2;1HZORK I: The Great Underground Empire
 Infocom interactive fiction - a fantasy story
 Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom,
 Inc. All rights reserved.
@@ -31,10 +31,10 @@ You are standing in an open field west of a white house,
 with a boarded front door.
 There is a small mailbox here.
 
->^[7^[[1;1H^[[7m West of House                           Score: 0  Moves: 0 ^[[0m^[8open mailbox
+>^[7^[[1;1H^[[0;7m West of House                           Score: 0  Moves: 0 ^[[0m^[8open mailbox
 Opening the small mailbox reveals a leaflet.
 
->^[7^[[1;1H^[[7m West of House                           Score: 0  Moves: 1 ^[[0m^[8^[[0m^[[r^[[24;1H
+>^[7^[[1;1H^[[0;7m West of House                           Score: 0  Moves: 1 ^[[0m^[8^[[0m^[[r^[[24;1H
 ```
 
 ### its text at the first prompt: the room on the left, score and moves right
@@ -160,4 +160,86 @@ West of House
 You are standing in
 an open field. é >
 "an open field. é >"
+```
+
+## styles and colours
+
+The look is one SGR sequence -- reset, the style, the foreground, the
+background -- sent whole on every change, so a style of 0 keeps the
+colours.  set_colour's 2 to 9 are ANSI's 30-37 and 40-47, 1 the
+terminal's own, 0 no change; set_true_colour sends 24-bit colour from
+fifteen bits, -1 (65535) the terminal's own and -2 (65534) no change.
+
+### styles add to each other, and set_colour builds on them
+
+```infocom
+(zm-screen-ansi! 80 24 #t)
+(zm-input-script! ())
+(zm-start! (zm-story "praxix.z5"))
+(zm-flush)
+(zm-out-zscii 13)
+(zm-set-colour! 4 1)
+(zm-out-ascii "green ")
+(zm-text-style! 2)
+(zm-out-ascii "bold ")
+(zm-text-style! 4)
+(zm-out-ascii "italic too ")
+(zm-set-colour! 0 7)
+(zm-out-ascii "on magenta ")
+(zm-text-style! 0)
+(zm-out-ascii "roman ")
+(zm-set-colour! 1 1)
+(zm-out-ascii "own")
+(zm-out-zscii 13)
+(zm-flush)
+(zm-screen-plain! 80)
+()
+```
+---
+```output
+^[[0m^[[2J^[[1;1H^[7^[[1;24r^[8^[[1;1H
+^[[0;32mgreen ^[[0;1;32mbold ^[[0;1;3;32mitalic too ^[[0;1;3;32;45mon magenta ^[[0;32;45mroman ^[[0mown
+```
+
+### set_true_colour: fifteen bits as 24-bit colour, -2 keeps, -1 resets
+
+```infocom
+(zm-screen-ansi! 80 24 #t)
+(zm-input-script! ())
+(zm-start! (zm-story "praxix.z5"))
+(zm-flush)
+(zm-out-zscii 13)
+(zm-set-true-colour! 31 32767)
+(zm-out-ascii "red on white ")
+(zm-set-true-colour! 65534 992)
+(zm-out-ascii "on green ")
+(zm-set-true-colour! 65535 65535)
+(zm-out-ascii "own")
+(zm-out-zscii 13)
+(zm-flush)
+(zm-screen-plain! 80)
+()
+```
+---
+```output
+^[[0m^[[2J^[[1;1H^[7^[[1;24r^[8^[[1;1H
+^[[0;38;2;255;0;0;48;2;255;255;255mred on white ^[[0;38;2;255;0;0;48;2;0;255;0mon green ^[[0mown
+```
+
+### the header claims colours on a terminal from version 5, not on the plain screen through a pipe
+
+```infocom
+(zm-screen-ansi! 80 24 #t)
+(zm-start! (zm-story "praxix.z5"))
+(def %co-ansi (zm& (zm-rb 1) 1))
+(zm-flush)
+(zm-screen-plain! 80)
+(zm-start! (zm-story "praxix.z5"))
+(def %co-plain (zm& (zm-rb 1) 1))
+(zm-flush)
+(write (list %co-ansi %co-plain))
+```
+---
+```output
+^[[0m^[[2J^[[1;1H^[7^[[1;24r^[8^[[1;1H(1 0)
 ```

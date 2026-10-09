@@ -204,7 +204,7 @@
     (if (zm< v 5) ()
       (do
         (%zm-op! 2 26 "call_2n" #f #f #f (%zm-caller #f))
-        (%zm-op! 2 27 "set_colour" #f #f #f (%zm-do2 (fn (_ f b) ())))
+        (%zm-op! 2 27 "set_colour" #f #f #f (%zm-do2 zm-set-colour!))
         (%zm-op! 2 28 "throw" #f #f #f
           (fn (_ ops st br tx next)
             (def a (%zm-g ops 0))
@@ -447,5 +447,5 @@
             (fn (_) (def pc (zm-restore-undo)) (if (null? pc) (do (zm-var-set! st 0) next) pc))))
         (%zm-op! 4 11 "print_unicode" #f #f #f (%zm-do1 zm-out-unicode))
         (%zm-op! 4 12 "check_unicode" #t #f #f (%zm-store1 (fn (_ c) (if (zm< c 128) 3 1))))
-        (%zm-op! 4 13 "set_true_colour" #f #f #f (%zm-do2 (fn (_ f b) ())))))
+        (%zm-op! 4 13 "set_true_colour" #f #f #f (%zm-do2 zm-set-true-colour!))))
     v))

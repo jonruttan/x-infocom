@@ -8,10 +8,14 @@ tools around one, as a lang bundle.
 plays a story, reading commands from standard input.  On a terminal the
 screen is drawn with ANSI sequences at the window's size: the status line
 (before version 4) and the upper window held above a scroll region, text
-styles as reverse, bold and italic.  Through a pipe, under `TERM=dumb` or
+styles as reverse, bold and italic, combined as the story sets them, and
+colours -- the eight of `set_colour` and the 24-bit ones of
+`set_true_colour` -- from version 5.  Through a pipe, under `TERM=dumb` or
 with `--plain`, it prints lines instead -- the lower window only, wrapped
 at 80 columns -- which is what transcripts and the specs use; `--upper` adds
-the status line and the upper window to them, as lines.
+the status line and the upper window to them, as lines.  `--plain` on a
+terminal keeps the styles and colours in those lines; through a pipe they
+are the text alone.
 
 ## The machine
 
@@ -41,7 +45,7 @@ the stack and the frames, and restore_undo puts the newest back.
 
 Not served yet:
 
-- sound, fonts and colours; text styles on the plain screen.
+- sound and fonts.
 
 ## The command line
 

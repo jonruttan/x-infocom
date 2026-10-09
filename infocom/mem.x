@@ -86,28 +86,31 @@
     zm-version))
 
 ; What the interpreter says about itself in the header, by screen.  The
-; plain screen: no status line or split, no styles, an unbounded height.
-; The terminal: the status line and a split (before version 4); bold,
-; italic and fixed pitch (from 4); the window's own size.  Either: timed
-; input (from 4).
+; plain screen: no status line or split, an unbounded height.  The
+; terminal: the status line and a split (before version 4); the window's
+; own size.  Either: timed input (from 4); and where SGR is sent -- the
+; terminal, or the plain screen printing to one -- bold, italic and fixed
+; pitch (from 4) and colours (from 5).
 (def %zm-header-set!
   (fn (_)
     (def width (if (zm< 0 %zm-width) %zm-width 80))
     (def height (if zm-ansi? %zm-rows 255))
+    (def colours? (if (zm< zm-version 5) #f (%zm-sgr?)))
     (if (zm< zm-version 4)
       (zm-wb! 1 (zm| (zm& (zm-rb 1) (zm^ 255 (zm| 16 (zm| 32 64))))
                      (if zm-ansi? 32 0)))
       (do
-        ; bit 7, timed input, on either screen
-        (zm-wb! 1 (zm| 128 (if zm-ansi? 28 0)))
+        ; bit 7, timed input, on either screen; bit 0, colours
+        (zm-wb! 1 (zm| 128 (zm| (if (%zm-sgr?) 28 0) (if colours? 1 0))))
         (zm-wb! 32 height)
         (zm-wb! 33 width)
         (if (zm< zm-version 5) ()
           (do (zm-ww! 34 width) (zm-ww! 36 height) (zm-wb! 38 1) (zm-wb! 39 1)
-            ; the default colours: "default", there being no others
+            ; the default colours: "default", the terminal's own
             (zm-wb! 44 1) (zm-wb! 45 1)))))
-    ; flags 2: undo if the game asks; no pictures, mouse, colours or sound
-    (zm-wb! 17 (zm& (zm-rb 17) 23))
+    ; flags 2: undo if the game asks, and colours where there are some; no
+    ; pictures, mouse or sound
+    (zm-wb! 17 (zm& (zm-rb 17) (if colours? 87 23)))
     (zm-wb! 30 6)
     (zm-wb! 31 73)
     (zm-wb! 50 1)
