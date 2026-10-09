@@ -243,3 +243,66 @@ fifteen bits, -1 (65535) the terminal's own and -2 (65534) no change.
 ```output
 ^[[0m^[[2J^[[1;1H^[7^[[1;24r^[8^[[1;1H(1 0)
 ```
+
+## fonts and beeps
+
+### font 3 draws character graphics; set_font answers the font before
+
+```infocom
+(zm-screen-plain! 80)
+(zm-input-script! ())
+(zm-start! (zm-story "praxix.z5"))
+(def %fo-was (list (zm-set-font! 0) (zm-set-font! 3) (zm-set-font! 2)))
+(zm-out-ascii "/&&+&&0")
+(zm-out-zscii 13)
+(zm-out-ascii ",$ $-")
+(zm-out-zscii 13)
+(zm-out-ascii ".&&*&&1")
+(zm-out-zscii 13)
+(zm-out-ascii "!\"6789:WSZ abc")
+(zm-out-zscii 13)
+(def %fo-back (zm-set-font! 1))
+(zm-out-ascii "/&&+&&0 roman again")
+(zm-out-zscii 13)
+(zm-flush)
+(write (list %fo-was %fo-back))
+```
+---
+```output
+┌──┬──┐
+├╲ ╲┤
+└──┼──┘
+←→█▀▄▌▐█▌╳ ᚪᛒᚳ
+/&&+&&0 roman again
+((1 1 0) 3)
+```
+
+### the beeps ring the terminal's bell, and nothing through a pipe
+
+```infocom
+(zm-screen-ansi! 80 24 #t)
+(zm-input-script! ())
+(zm-start! (zm-story "praxix.z5"))
+(zm-flush)
+(zm-out-zscii 13)
+(zm-out-ascii "high")
+(zm-beep! 1)
+(zm-out-ascii " low")
+(zm-beep! 2)
+(zm-out-ascii " sampled")
+(zm-beep! 3)
+(zm-out-zscii 13)
+(zm-flush)
+(zm-screen-plain! 80)
+(zm-out-ascii "piped")
+(zm-beep! 1)
+(zm-out-zscii 13)
+(zm-flush)
+()
+```
+---
+```output
+^[[0m^[[2J^[[1;1H^[7^[[1;24r^[8^[[1;1H
+high^G low^G sampled
+piped
+```
