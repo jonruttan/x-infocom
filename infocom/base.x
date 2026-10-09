@@ -24,6 +24,7 @@
 (import infocom/decode)
 (import infocom/ops)
 (import infocom/quetzal)
+(import infocom/streams)
 (import infocom/undo)
 (import infocom/screen)
 (import infocom/machine)

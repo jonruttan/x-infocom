@@ -376,13 +376,15 @@
     (set! %zm-stream3 (pair (pair (first top) (zm+ n 1)) (rest %zm-stream3)))))
 
 ; ZSCII 0 is no character at all, in any stream.  The screen's upper
-; window is screen.x's to draw.
+; window is screen.x's to draw; the lower window's text also goes to the
+; transcript, whether or not the screen shows it, while no table takes it.
 (def zm-out-zscii
   (fn (_ c)
     (if (zm= c 0) ()
       (if (null? %zm-stream3)
-        (if %zm-stream1
-          (if (zm= zm-window 0) (%zm-screen-zscii c) (zm-upper-zscii c)))
+        (if (zm= zm-window 0)
+          (do (zm-script-zscii c) (if %zm-stream1 (%zm-screen-zscii c)))
+          (if %zm-stream1 (zm-upper-zscii c)))
         (%zm-s3-zscii c)))))
 
 (def zm-out-codes
@@ -419,6 +421,11 @@
     (match
       ((zm= s 1) (set! %zm-stream1 #t))
       ((zm= s -1) (set! %zm-stream1 #f))
+      ; the transcript follows the header's bit (streams.x)
+      ((zm= s 2) (zm-wb! 17 (zm| (zm-rb 17) 1)))
+      ((zm= s -2) (zm-wb! 17 (zm& (zm-rb 17) 254)))
+      ((zm= s 4) (zm-record-start!))
+      ((zm= s -4) (zm-record-stop!))
       ((zm= s 3) (set! %zm-stream3 (pair (pair table 0) %zm-stream3)))
       ((zm= s -3)
         (if (null? %zm-stream3) ()
@@ -432,6 +439,7 @@
 (def zm-out-unicode
   (fn (_ u)
     (if (null? %zm-stream3)
-      (if %zm-stream1
-        (if (zm= zm-window 0) (%zm-screen-unicode u) (zm-upper-unicode u)))
+      (if (zm= zm-window 0)
+        (do (zm-script-unicode u) (if %zm-stream1 (%zm-screen-unicode u)))
+        (if %zm-stream1 (zm-upper-unicode u)))
       (%zm-s3-zscii 63))))

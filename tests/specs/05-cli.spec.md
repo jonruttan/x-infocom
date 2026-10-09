@@ -28,6 +28,9 @@ Play:
 	-S,--save-dir DIR	Put save files in DIR
 	-e,--echo		Echo each command read, as a transcript shows it
 	-H,--history FILE	Keep the commands typed at a terminal in FILE (empty: nowhere)
+	-T,--transcript FILE	Write the transcript to FILE when the story starts one
+	-R,--record FILE	Record the commands typed in FILE
+	-P,--replay FILE	Take commands from FILE first, then from the keyboard
 Describe, then stop:
 	-i,--info		The header
 	-o,--objects		The objects, attributes and properties
@@ -50,8 +53,8 @@ Describe, then stop:
 ```
 ---
 ```output
-('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f) ('history)))
-('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f) ('history . "h")))
+('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f) ('history) ('transcript) ('record) ('replay)))
+('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f) ('history . "h") ('transcript) ('record) ('replay)))
 ('describe "z.z3" ('info 'tree ('dis . 20229)))
 (('refuse ()) ('refuse "unrecognized option '-z'") ('refuse "one story at a time") ('refuse "--width takes a number") ('help) ('help))
 ```

@@ -331,7 +331,7 @@
     (%zm-op! 3 10 "split_window" #f #f #f (%zm-do1 zm-split!))
     (%zm-op! 3 11 "set_window" #f #f #f (%zm-do1 zm-set-window!))
     (%zm-op! 3 19 "output_stream" #f #f #f (%zm-do2 zm-stream!))
-    (%zm-op! 3 20 "input_stream" #f #f #f (%zm-do1 (fn (_ n) ())))
+    (%zm-op! 3 20 "input_stream" #f #f #f (%zm-do1 zm-input-stream!))
     (%zm-op! 3 21 "sound_effect" #f #f #f (%zm-do0 (fn (_) ())))
     (if (zm< v 4) ()
       (do

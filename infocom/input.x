@@ -281,13 +281,17 @@
           ((zm= (first got) 0) ())
           (%zm-echo? (do (zm-out-codes (rest got)) (zm-out-zscii 13)))
           (#t (zm-col-reset!)))
+        ; the recording, and the transcript where nothing echoed it
+        (if (zm= (first got) 0) () (zm-line-typed (rest got) %zm-echo?))
         (def cut
           (fn (self cs n)
             (if (if (null? cs) #t (zm= n 0)) ()
               (pair (%zm-lower (first cs)) (self (rest cs) (zm- n 1))))))
         (pair (first got) (cut (rest got) max))))))
 
-; The next line as typed, for a file name: (#t . codes), or ().
+; The next line as typed, for a file name: (#t . codes), or ().  It is
+; recorded as a command is, so a recording played back answers the same
+; question the same way.
 (def zm-read-raw-line
   (fn (_)
     (zm-before-read!)
@@ -296,6 +300,7 @@
     (if (null? line) ()
       (do
         (if %zm-echo? (do (zm-out-codes (rest line)) (zm-out-zscii 13)) (zm-col-reset!))
+        (zm-line-typed (rest line) %zm-echo?)
         line))))
 
 (def %zm-lower

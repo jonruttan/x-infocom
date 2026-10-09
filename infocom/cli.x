@@ -31,6 +31,9 @@
       (Opts arg "-S" "--save-dir" "DIR" "Put save files in DIR")
       (Opts flag "-e" "--echo" "Echo each command read, as a transcript shows it")
       (Opts arg "-H" "--history" "FILE" "Keep the commands typed at a terminal in FILE (empty: nowhere)")
+      (Opts arg "-T" "--transcript" "FILE" "Write the transcript to FILE when the story starts one")
+      (Opts arg "-R" "--record" "FILE" "Record the commands typed in FILE")
+      (Opts arg "-P" "--replay" "FILE" "Take commands from FILE first, then from the keyboard")
       (Opts text "Describe, then stop:")
       (Opts flag "-i" "--info" "The header")
       (Opts flag "-o" "--objects" "The objects, attributes and properties")
@@ -83,7 +86,8 @@
 ;   (describe STORY VIEWS)      VIEWS, in order: info objects tree dict
 ;                               abbrevs (dis . ADDR)
 ;   (play STORY SETTINGS)       SETTINGS an alist: plain width seed restore
-;                               save-dir echo upper history
+;                               save-dir echo upper history transcript
+;                               record replay
 (def zm-cli-plan
   (fn (_ argv)
     (if (if (Opts help? zm-options argv) #t
@@ -123,7 +127,10 @@
                         (pair (lit save-dir) (val "-S"))
                         (pair (lit echo) (on? "-e"))
                         (pair (lit upper) (on? "-u"))
-                        (pair (lit history) (val "-H"))))))))))))
+                        (pair (lit history) (val "-H"))
+                        (pair (lit transcript) (val "-T"))
+                        (pair (lit record) (val "-R"))
+                        (pair (lit replay) (val "-P"))))))))))))
 
 (def %zm-say-err (fn (_ s) (zm-file-write 2 s (%zm-byte-len s))))
 
@@ -172,6 +179,7 @@
     (zm-sys-dup2 3 0)
     (zm-sys-close 3)
     (zm-history! (%zm-setting settings (lit history)))
+    (zm-transcript-file! (%zm-setting settings (lit transcript)))
     (zm-input-fd! 0)
     (if (%zm-setting settings (lit echo)) (zm-echo! #t))
     (zm-plain-upper! (%zm-setting settings (lit upper)))
@@ -179,6 +187,13 @@
       (zm-save-dir! (%zm-setting settings (lit save-dir))))
     (%zm-screen-choose! (%zm-setting settings (lit plain)) (%zm-setting settings (lit width)))
     (def pc0 (zm-start! story))
+    (def record (%zm-setting settings (lit record)))
+    (if (null? record) () (do (zm-record-file! record) (zm-record-start!)))
+    (def replay (%zm-setting settings (lit replay)))
+    (if (if (null? replay) #f (not (zm-replay-file! replay)))
+      (do (zm-screen-end!)
+          (%zm-say-err (Str8 append "infocom: cannot read " replay "\n"))
+          (zm-sys-exit 1)))
     (def seed (%zm-setting settings (lit seed)))
     (zm-seed! (if (null? seed) (%zm-clock-seed) seed))
     (def file (%zm-setting settings (lit restore)))
