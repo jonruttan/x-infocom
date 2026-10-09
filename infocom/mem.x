@@ -111,7 +111,9 @@
     ; flags 2: undo if the game asks, and colours where there are some; no
     ; pictures, mouse or sound
     (zm-wb! 17 (zm& (zm-rb 17) (if colours? 87 23)))
-    (zm-wb! 30 6)
+    ; the interpreter: 1, DECSystem-20, as dfrotz says -- a story that asks
+    ; draws for that, not an IBM PC's character set (Beyond Zork's map)
+    (zm-wb! 30 1)
     (zm-wb! 31 73)
     (zm-wb! 50 1)
     (zm-wb! 51 1)))

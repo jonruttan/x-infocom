@@ -332,7 +332,14 @@
     (%zm-op! 3 11 "set_window" #f #f #f (%zm-do1 zm-set-window!))
     (%zm-op! 3 19 "output_stream" #f #f #f (%zm-do2 zm-stream!))
     (%zm-op! 3 20 "input_stream" #f #f #f (%zm-do1 zm-input-stream!))
-    (%zm-op! 3 21 "sound_effect" #f #f #f (%zm-do0 (fn (_) ())))
+    ; sound_effect: 1 and 2 are the high and low beeps (no operand, the
+    ; first); the sampled sounds of a story's own are not played
+    (%zm-op! 3 21 "sound_effect" #f #f #f
+      (fn (_ ops st br tx next)
+        (fn (_)
+          (def vs (%zm-eval-all ops))
+          (zm-beep! (if (null? vs) 1 (first vs)))
+          next)))
     (if (zm< v 4) ()
       (do
         (%zm-op! 3 12 "call_vs2" #t #f #f (%zm-caller #t))
@@ -439,7 +446,7 @@
             (fn (_ x p)
               (def n (%zm-s p))
               (if (zm< n 0) (%zm-w (zm>> (%zm-s x) (zm- 0 n))) (%zm-w (zm<< x n))))))
-        (%zm-op! 4 4 "set_font" #t #f #f (%zm-store1 (fn (_ f) (if (zm= f 1) 1 0))))
+        (%zm-op! 4 4 "set_font" #t #f #f (%zm-store1 zm-set-font!))
         (%zm-op! 4 9 "save_undo" #t #f #f
           (fn (_ ops st br tx next) (fn (_) (zm-var-set! st (zm-save-undo next st)) next)))
         (%zm-op! 4 10 "restore_undo" #t #f #f

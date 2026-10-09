@@ -44,7 +44,7 @@ Indirect Opcodes [283]: load..................store.........................
 Misc [401]: test...random.verify.piracy.
 Header (No tests)
     standard 1.1
-    interpreter 6 I (IBM PC)
+    interpreter 1 I (DECSystem-20)
     Flags on: timer,
     Flags off: color, pictures, boldface, italic, fixed-space, sound,
 transcripting on, fixed-pitch on, redraw pending, using pictures, using undo,
