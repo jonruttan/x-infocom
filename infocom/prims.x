@@ -18,7 +18,7 @@
 
 (provide infocom/prims
   zm+ zm- zm* zm/ zm% zm& zm| zm^ zm<< zm>> zm< zm=
-  %zm-pref %zm-pset! %zm-mem-copy %zm-str->ptr %zm-str-make
+  %zm-pref %zm-pset! %zm-mem-copy %zm-str->ptr %zm-str-make %zm-ptr->int %zm-int->ptr
   %zm-obj-make %zm-obj-ref %zm-obj-set! %zm-vector-type %zm-vec
   %zm-char->int %zm-byte-ref %zm-byte-len
   %zm-rev %zm-rev-onto %zm-length %zm-assq %zm-hex-str
@@ -44,6 +44,8 @@
 (def %zm-pset! (prim-ref (lit ptr) (lit set!)))
 ; (mem copy DST SRC N): a block copy between pointers, memcpy itself.
 (def %zm-mem-copy (prim-ref (lit mem) (lit copy)))
+(def %zm-ptr->int (prim-ref (lit ptr) (lit ->int)))
+(def %zm-int->ptr (prim-ref (lit int) (lit ->ptr)))
 (def %zm-str->ptr (prim-ref (lit str) (lit ->ptr)))
 (def %zm-str-make (prim-ref (lit str) (lit make)))
 

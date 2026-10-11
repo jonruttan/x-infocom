@@ -3,12 +3,13 @@
 #
 # ## tools/sweep.sh -- every story in a directory, against dfrotz
 #
-# @description Plays each story file under DIR (versions 3, 4, 5 and 8;
-#   version 6 is not served) on COMMANDS -- nothing, by default: the opening
-#   to the first prompt -- under this bundle and under dfrotz, and reports
-#   for each whether the transcripts are the same, differ, or whether this
-#   machine stopped with an error.  The stories are read where they are and
-#   copied nowhere; the transcripts and diffs go to OUT.
+# @description Plays each story file under DIR (versions 3, 4, 5 and 8, bare
+#   or in a Blorb; version 6 is not served) on COMMANDS -- nothing, by
+#   default: the opening to the first prompt -- under this bundle and under
+#   dfrotz, and reports for each whether the transcripts are the same,
+#   differ, or whether this machine stopped with an error.  The stories are
+#   read where they are and copied nowhere; the transcripts and diffs go to
+#   OUT.
 # @author [Jon Ruttan](jonruttan@gmail.com)
 # @copyright 2026 Jon Ruttan
 # @license MIT No Attribution (MIT-0)
@@ -57,7 +58,7 @@ run_ours() {
 }
 
 printf '%-40s %s\n' story verdict > "$out/summary.txt"
-find -L "$dir" -type f \( -iname '*.z3' -o -iname '*.z4' -o -iname '*.z5' -o -iname '*.z8' \) |
+find -L "$dir" -type f \( -iname '*.z3' -o -iname '*.z4' -o -iname '*.z5' -o -iname '*.z8' -o -iname '*.zblorb' -o -iname '*.zlb' \) |
 	sort | while IFS= read -r story; do
 	name="$(basename "$story")"
 	key="$(printf '%s' "$story" | cksum | cut -d' ' -f1)-$name"

@@ -26,7 +26,9 @@ two beeps of `sound_effect` ring the terminal's bell.
 
 ## The machine
 
-Story files of versions 3, 4, 5 and 8 load; versions 1, 2, 6 and 7 are
+Story files of versions 3, 4, 5 and 8 load, bare or inside a Blorb file
+(`.zblorb`, `.zlb`: the story as its Exec 0 resource, found through the
+index or by searching); versions 1, 2, 6 and 7 are
 refused at the start.  Zork I, II and III (version 3) run with output
 identical to dfrotz's: Zork I from its opening through the house and into
 the cellar, II and III through their first rooms.  Two
