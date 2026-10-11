@@ -79,6 +79,7 @@ Play:
 | `-r`, `--restore FILE` | begin from a saved game |
 | `-S`, `--save-dir DIR` | put save files in DIR |
 | `-e`, `--echo` | echo each command read, as a transcript shows it |
+| `-g`, `--debug` | start stopped at the first instruction, at the debugger's prompt |
 | `-H`, `--history FILE` | keep the commands typed at a terminal in FILE; empty, nowhere |
 | `-T`, `--transcript FILE` | write the transcript to FILE when the story starts one (else it is asked for) |
 | `-R`, `--record FILE` | record the commands typed in FILE |
@@ -123,6 +124,13 @@ next read takes.
 
 ## Tools
 
+- `-g`/`--debug` (infocom/debug.x): a debugger over the running machine.
+  The story stops before an instruction and the `(zdb)` prompt takes a
+  command: `s [N]` step, `n` step over a call, `fin` run to the routine's
+  return, `c` continue to a breakpoint, `b ADDR` / `d ADDR` set and delete
+  one, `bt` the frames, `l` the locals, `sp` the stack, `g N` a global,
+  `x ADDR [N]` memory, `o N` an object, `pc`, `q`.  Its commands are read
+  as the story's lines are, so between stops the story reads its own.
 - `zm-dis`, `zm-dis-code`, `zm-dis-routine` and `zm-trace-run`
   (infocom/dis.x): a disassembler in the style of txd, over the parser the
   machine runs on, and a run that prints each instruction before it runs.

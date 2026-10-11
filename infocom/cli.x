@@ -30,6 +30,7 @@
       (Opts arg "-r" "--restore" "FILE" "Begin from a saved game")
       (Opts arg "-S" "--save-dir" "DIR" "Put save files in DIR")
       (Opts flag "-e" "--echo" "Echo each command read, as a transcript shows it")
+      (Opts flag "-g" "--debug" "Start stopped at the first instruction, at the debugger's prompt")
       (Opts arg "-H" "--history" "FILE" "Keep the commands typed at a terminal in FILE (empty: nowhere)")
       (Opts arg "-T" "--transcript" "FILE" "Write the transcript to FILE when the story starts one")
       (Opts arg "-R" "--record" "FILE" "Record the commands typed in FILE")
@@ -87,7 +88,7 @@
 ;                               abbrevs (dis . ADDR)
 ;   (play STORY SETTINGS)       SETTINGS an alist: plain width seed restore
 ;                               save-dir echo upper history transcript
-;                               record replay
+;                               record replay debug
 (def zm-cli-plan
   (fn (_ argv)
     (if (if (Opts help? zm-options argv) #t
@@ -130,7 +131,8 @@
                         (pair (lit history) (val "-H"))
                         (pair (lit transcript) (val "-T"))
                         (pair (lit record) (val "-R"))
-                        (pair (lit replay) (val "-P"))))))))))))
+                        (pair (lit replay) (val "-P"))
+                        (pair (lit debug) (on? "-g"))))))))))))
 
 (def %zm-say-err (fn (_ s) (zm-file-write 2 s (%zm-byte-len s))))
 
@@ -206,7 +208,7 @@
                 (%zm-say-err (Str8 append "infocom: cannot restore " (Str8 append file "\n")))
                 (zm-sys-exit 1))
             r))))
-    (zm-run pc)
+    (if (%zm-setting settings (lit debug)) (zm-debug pc) (zm-run pc))
     (zm-screen-end!)))
 
 (def zm-main

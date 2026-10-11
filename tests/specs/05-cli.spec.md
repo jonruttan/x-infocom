@@ -27,6 +27,7 @@ Play:
 	-r,--restore FILE	Begin from a saved game
 	-S,--save-dir DIR	Put save files in DIR
 	-e,--echo		Echo each command read, as a transcript shows it
+	-g,--debug		Start stopped at the first instruction, at the debugger's prompt
 	-H,--history FILE	Keep the commands typed at a terminal in FILE (empty: nowhere)
 	-T,--transcript FILE	Write the transcript to FILE when the story starts one
 	-R,--record FILE	Record the commands typed in FILE
@@ -53,8 +54,8 @@ Describe, then stop:
 ```
 ---
 ```output
-('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f) ('history) ('transcript) ('record) ('replay)))
-('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f) ('history . "h") ('transcript) ('record) ('replay)))
+('play "z.z3" (('plain . #f) ('width . 80) ('seed) ('restore) ('save-dir) ('echo . #f) ('upper . #f) ('history) ('transcript) ('record) ('replay) ('debug . #f)))
+('play "z.z3" (('plain . #t) ('width . 60) ('seed . 7) ('restore . "a.qzl") ('save-dir . "/tmp") ('echo . #t) ('upper . #f) ('history . "h") ('transcript) ('record) ('replay) ('debug . #f)))
 ('describe "z.z3" ('info 'tree ('dis . 20229)))
 (('refuse ()) ('refuse "unrecognized option '-z'") ('refuse "one story at a time") ('refuse "--width takes a number") ('help) ('help))
 ```
