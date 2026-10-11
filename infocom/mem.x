@@ -56,12 +56,57 @@
 
 ; Load a story: two reads of the file, so the working copy and the pristine
 ; one never share storage.
+; A Blorb file -- an IFF FORM of type IFRS -- holds the story as its Exec 0
+; resource, a ZCOD chunk: the index (RIdx) says where it starts, and a file
+; without one is searched for the chunk.  Answers (start . length) of the
+; Z-code within the file; the symbol none for a Blorb with no Z-code in it
+; (a Glulx game's); or () when the file is not a Blorb.
+(def %zm-blorb-story
+  (fn (_ p size)
+    (def b (fn (_ a) (zm& (%zm-pref p a 1) 255)))
+    (def l (fn (_ a) (zm| (zm<< (b a) 24) (zm| (zm<< (b (zm+ a 1)) 16) (zm| (zm<< (b (zm+ a 2)) 8) (b (zm+ a 3)))))))
+    (def id? (fn (_ a s) (if (zm< size (zm+ a 4)) #f (zm= (l a) (%qz-rl-of s)))))
+    (def zcod (fn (_ a) (if (id? a "ZCOD") (pair (zm+ a 8) (l (zm+ a 4))) ())))
+    (def exec0
+      (fn (_ a)
+        (def count (l (zm+ a 8)))
+        (def go
+          (fn (self i)
+            (if (zm< i count)
+              (do
+                (def e (zm+ (zm+ a 12) (zm* i 12)))
+                (if (if (id? e "Exec") (zm= (l (zm+ e 4)) 0) #f) (zcod (l (zm+ e 8))) (self (zm+ i 1))))
+              ())))
+        (go 0)))
+    (def scan
+      (fn (self a)
+        (if (zm< size (zm+ a 8)) (lit none)
+          (do
+            (def n (l (zm+ a 4)))
+            (def found (match ((id? a "ZCOD") (zcod a)) ((id? a "RIdx") (exec0 a)) (#t ())))
+            (if (null? found) (self (zm+ (zm+ a 8) (zm+ n (zm& n 1)))) found)))))
+    (if (if (zm< 12 size) (if (id? 0 "FORM") (id? 8 "IFRS") #f) #f) (scan 12) ())))
+
+; n bytes of the buffer at p from off, as a buffer of their own.
+(def %zm-bytes-from
+  (fn (_ p off n)
+    (def s (%zm-str-make (zm+ n 1)))
+    (%zm-mem-copy (%zm-str->ptr s) (%zm-int->ptr (zm+ (%zm-ptr->int p) off)) n)
+    s))
+
 (def zm-load!
   (fn (_ path)
-    (set! zm-size (zm-file-size path))
-    (set! %zm-mem (zm-file-read-all path))
+    (def size (zm-file-size path))
+    (def file (zm-file-read-all path))
+    (def p (%zm-str->ptr file))
+    (def blorb (%zm-blorb-story p size))
+    (if (eq? blorb (lit none))
+      (Err raise (lit infocom) "a Blorb file with no Z-code in it (a Glulx game's?)" path))
+    (def at (if (null? blorb) 0 (first blorb)))
+    (set! zm-size (if (null? blorb) size (rest blorb)))
+    (set! %zm-mem (%zm-bytes-from p at zm-size))
     (set! %zm-ptr (%zm-str->ptr %zm-mem))
-    (set! %zm-orig (zm-file-read-all path))
+    (set! %zm-orig (%zm-bytes-from p at zm-size))
     (set! %zm-orig-ptr (%zm-str->ptr %zm-orig))
     (set! zm-version (zm-rb 0))
     ; the first byte of a story is its version, 1 to 8, and the header is 64
