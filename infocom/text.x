@@ -17,7 +17,7 @@
   zm-zstring zm-zstring-at zm-encode-word
   zm-out-zscii zm-out-codes zm-out-num zm-out-ascii zm-out-unicode zm-flush
   zm-stream! zm-text-reset! zm-output-fd! zm-width! zm-col-reset!
-  zm-lines-before-line zm-row-str)
+  zm-lines-before-line zm-row-str zm-set-font!)
 
 ; Alphabet 2 from Z-character 6: 6 is the escape (never looked up), 7 a
 ; newline, then the punctuation row.
@@ -198,7 +198,9 @@
     (set! %zm-wlen 0)
     (set! %zm-spaces 0)
     (set! %zm-stream1 #t)
-    (set! %zm-stream3 ())))
+    (set! %zm-stream3 ())
+    (set! %zm-font 1)
+    (if (null? %zm-font3) (set! %zm-font3 (%zm-font3-make)))))
 
 ; Where the line in progress begins in the byte buffer: 0 after a write
 ; that ended a line, -1 once a write has sent part of the line out.
@@ -314,9 +316,55 @@
                 (go 0)
                 (set! %zm-utable v)))))))))
 
+; --- fonts -------------------------------------------------------------------
+; set_font (version 5 on): 1 the normal font, 4 fixed pitch -- the same on
+; a terminal -- and 3, character graphics.  Font 3's ZSCII 32-126 are
+; pictures the Standard draws as 8x8 bitmaps and does not name; they are
+; written here as the Unicode characters nearest them: arrows, lines,
+; corners and T-pieces for a map's walls, blocks and partial blocks, and
+; the Anglian runes the Standard says the letters stand for.  The rest
+; print as themselves.
+
+(def %zm-font 1)
+
+; The table is made when the text is first reset, not at load, so it is
+; no part of the bundle's state image; the codes go in slots 1 to 95.
+(def %zm-font3 ())
+(def %zm-font3-make
+  (fn (_)
+    (def us
+      (list
+        ; 32-47: space, arrows, diagonals, space, bars, lines, crossing, T-pieces
+        32 8592 8594 9585 9586 32 9472 9472 9474 9474 9532 9516 9500 9508 9492 9484
+        ; 48-63: corners, the corner forms with a diagonal, blocks
+        9488 9496 9492 9581 9582 9583 9608 9600 9604 9612 9616 9604 9600 9612 9616 9629
+        ; 64-79: quarter blocks, corner pixels, edge bars, double bar
+        9623 9622 9624 9629 9623 9622 9624 9629 9623 9622 9624 9620 9601 9615 9621 9552
+        ; 80-95: filling eighth by eighth, edge columns, a cross, a crossing, then
+        ; 92 and 93 the up and down arrows Beyond Zork prints, the rest as themselves
+        9615 9614 9613 9612 9611 9610 9609 9608 9621 9615 9587 9532 8593 8595 94 95
+        ; 96-111: the accent as itself, then runes for a to o
+        96 5802 5842 5811 5854 5846 5792 5815 5819 5825 5828 5859 5850 5847 5822 5801
+        ; 112-126: runes for p to z, then the rest as themselves
+        5832 5858 5809 5835 5839 5794 5817 5817 5833 5795 5833 123 124 125 126))
+    (def v (%zm-vec 95))
+    (def put (fn (self i us) (if (null? us) v (do (%zm-obj-set! v i (first us)) (self (zm+ i 1) (rest us))))))
+    (put 1 us)))
+
+; set_font: the font in force before, or 0 for one there is not; 0 asks
+; which font is in force without changing it.
+(def zm-set-font!
+  (fn (_ f)
+    (def was %zm-font)
+    (match
+      ((zm= f 0) was)
+      ((if (zm= f 1) #t (if (zm= f 3) #t (zm= f 4))) (do (%zm-commit) (set! %zm-font f) was))
+      (#t 0))))
+
 (def %zm-zscii->unicode
   (fn (_ c)
-    (if (if (zm< c 32) #f (zm< c 127)) c
+    (if (if (zm< c 32) #f (zm< c 127))
+      (if (zm= %zm-font 3) (%zm-obj-ref %zm-font3 (zm- c 31)) c)
       (if (if (zm< c 155) #t (zm< (zm+ 154 (%zm-obj-ref %zm-utable 0)) c)) ()
         (%zm-obj-ref %zm-utable (zm- c 154))))))
 

@@ -17,6 +17,13 @@ the status line and the upper window to them, as lines.  `--plain` on a
 terminal keeps the styles and colours in those lines; through a pipe they
 are the text alone.
 
+Font 3, the character graphics Beyond Zork draws its map and status bars
+in, is written as the nearest Unicode: box-drawing lines and corners,
+blocks and partial blocks, arrows, and runes for the letters.  The
+interpreter is reported as a DECSystem-20, as dfrotz reports it, so such
+a story draws for this font and not for an IBM PC's character set.  The
+two beeps of `sound_effect` ring the terminal's bell.
+
 ## The machine
 
 Story files of versions 3, 4, 5 and 8 load; versions 1, 2, 6 and 7 are
@@ -52,7 +59,7 @@ the stack and the frames, and restore_undo puts the newest back.
 
 Not served yet:
 
-- sound and fonts.
+- the sampled sounds of a story's own (those in a Blorb file).
 
 ## The command line
 

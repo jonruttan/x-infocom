@@ -23,7 +23,7 @@
   zm-ansi? zm-window zm-status! zm-status-codes zm-before-read! zm-plain-upper!
   zm-split! zm-set-window! zm-erase-window! zm-erase-line! zm-set-cursor!
   zm-cursor zm-text-style! zm-upper-zscii zm-upper-unicode
-  zm-set-colour! zm-set-true-colour! zm-plain-sgr!)
+  zm-set-colour! zm-set-true-colour! zm-plain-sgr! zm-beep!)
 
 (def zm-ansi? #f)
 (def %zm-esc-visible? #f)
@@ -404,6 +404,15 @@
   (fn (_ s)
     (set! %zm-style (if (zm= s 0) 0 (zm| %zm-style s)))
     (%zm-look!)))
+
+; sound_effect's beeps, 1 high and 2 low, are the terminal's bell (BEL);
+; through a pipe there is nothing to ring.
+(def zm-beep!
+  (fn (_ n)
+    (if (if (%zm-sgr?) (if (zm= n 1) #t (zm= n 2)) #f)
+      (do
+        (%zm-commit)
+        (if %zm-esc-visible? (%zm-bytes "^G") (%zm-out-byte 7))))))
 
 ; set_colour: 0 keeps a colour, 1 is the terminal's own, 2 to 9 are black,
 ; red, green, yellow, blue, magenta, cyan and white -- ANSI's order, from
