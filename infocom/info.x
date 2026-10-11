@@ -13,7 +13,7 @@
 ; Addresses and data bytes are hexadecimal, counts decimal.
 
 (provide infocom/info
-  zm-info-header zm-info-objects zm-info-tree zm-info-dict zm-info-abbrevs
+  zm-info-header zm-info-object zm-info-objects zm-info-tree zm-info-dict zm-info-abbrevs
   zm-object-count)
 
 (def %zm-say (fn (_ s) (zm-out-ascii s)))
@@ -115,21 +115,24 @@
             (self (zm+ data size))))))
     (go (%zm-prop-first o))))
 
+; One object: its name, attributes, relations and properties.
+(def zm-info-object
+  (fn (_ o)
+    (%zm-dec-pad o 3) (%zm-say ". ") (%zm-name-q o) (%zm-nl)
+    (%zm-say "    Attributes: ") (%zm-attrs o) (%zm-nl)
+    (%zm-say "    Parent ") (%zm-dec (zm-obj-parent o))
+    (%zm-say "  Sibling ") (%zm-dec (zm-obj-sibling o))
+    (%zm-say "  Child ") (%zm-dec (zm-obj-child o)) (%zm-nl)
+    (%zm-say "    Properties at ") (%zm-hex4 (%zm-props o)) (%zm-nl)
+    (%zm-props-list o)))
+
 (def zm-info-objects
   (fn (_)
     (def n (zm-object-count))
     (def go
       (fn (self o)
         (if (zm< n o) ()
-          (do
-            (%zm-dec-pad o 3) (%zm-say ". ") (%zm-name-q o) (%zm-nl)
-            (%zm-say "    Attributes: ") (%zm-attrs o) (%zm-nl)
-            (%zm-say "    Parent ") (%zm-dec (zm-obj-parent o))
-            (%zm-say "  Sibling ") (%zm-dec (zm-obj-sibling o))
-            (%zm-say "  Child ") (%zm-dec (zm-obj-child o)) (%zm-nl)
-            (%zm-say "    Properties at ") (%zm-hex4 (%zm-props o)) (%zm-nl)
-            (%zm-props-list o)
-            (self (zm+ o 1))))))
+          (do (zm-info-object o) (self (zm+ o 1))))))
     (go 1)
     (zm-flush)))
 
