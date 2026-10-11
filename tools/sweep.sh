@@ -19,7 +19,8 @@
 # fresh langs directory under OUT first, because x keys its state image by
 # the bundle's path: a reused path can serve an image of older code.
 # Each run is held to SWEEP_SECS seconds (default 60) and SWEEP_MB of
-# memory (default 2000) by ~/.cache/x-claude/guard.sh when it is there.
+# memory (default 4000: the first run writes the state image, 3.5 GB on
+# x-lang v0.27.0) by ~/.cache/x-claude/guard.sh when it is there.
 set -e
 
 dir="$1"
@@ -47,8 +48,8 @@ cp -R "$here/lang.xon" "$here/run.x" "$here/infocom" "$langs/infocom/"
 guard="$HOME/.cache/x-claude/guard.sh"
 run_ours() {
 	if [ -f "$guard" ]; then
-		GUARD_START="${GUARD_START:-30}" X_LANG_DIR="$langs/" \
-			sh "$guard" "${SWEEP_MB:-2000}" "${SWEEP_SECS:-60}" -- \
+		X_LANG_DIR="$langs/" \
+			sh "$guard" "${SWEEP_MB:-4000}" "${SWEEP_SECS:-60}" -- \
 			"$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
 	else
 		X_LANG_DIR="$langs/" "$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
