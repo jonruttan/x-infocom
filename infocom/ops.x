@@ -35,38 +35,67 @@
 
 ; --- builder shapes --------------------------------------------------------
 
+; A branch as the two pcs its test chooses between, (if-true . if-false),
+; or () when it returns, which %zm-br does as it runs.
+(def %zm-br-pcs
+  (fn (_ br next)
+    (if (zm< (rest br) 2) ()
+      (if (first br) (pair (rest br) next) (pair next (rest br))))))
+
+; The closure for a branch on test, which fetches its own operands.
+(def %zm-branch-on
+  (fn (_ test br next)
+    (def pcs (%zm-br-pcs br next))
+    (if (null? pcs) (fn (_) (%zm-br (test) br next))
+      (do
+        (def yes (first pcs))
+        (def no (rest pcs))
+        (fn (_) (if (test) yes no))))))
+
 (def %zm-store1
   (fn (_ f)
     (fn (_ ops st br tx next)
       (def a (%zm-g ops 0))
-      (fn (_) (zm-var-set! st (f (a))) next))))
+      (def put (%zm-setter st))
+      (fn (_) (put (f (a))) next))))
 
 (def %zm-store2
   (fn (_ f)
     (fn (_ ops st br tx next)
       (def a (%zm-g ops 0))
       (def b (%zm-g ops 1))
+      (def put (%zm-setter st))
       (fn (_)
         (def x (a))
         (def y (b))
-        (zm-var-set! st (f x y))
+        (put (f x y))
+        next))))
+
+; add, sub, mul: the primitive's answer kept to 16 bits.
+(def %zm-arith2
+  (fn (_ p)
+    (fn (_ ops st br tx next)
+      (def a (%zm-g ops 0))
+      (def b (%zm-g ops 1))
+      (def put (%zm-setter st))
+      (fn (_)
+        (def x (a))
+        (def y (b))
+        (put (zm& (p x y) 65535))
         next))))
 
 (def %zm-branch1
   (fn (_ f)
     (fn (_ ops st br tx next)
       (def a (%zm-g ops 0))
-      (fn (_) (%zm-br (f (a)) br next)))))
+      (%zm-branch-on (fn (_) (f (a))) br next))))
 
 (def %zm-branch2
   (fn (_ f)
     (fn (_ ops st br tx next)
       (def a (%zm-g ops 0))
       (def b (%zm-g ops 1))
-      (fn (_)
-        (def x (a))
-        (def y (b))
-        (%zm-br (f x y) br next)))))
+      (%zm-branch-on (fn (_) (def x (a)) (def y (b)) (f x y)) br next))))
 
 (def %zm-do1
   (fn (_ f)
@@ -156,15 +185,22 @@
     (def v zm-version)
 
     ; 2OP
+    ; je with one value to match makes no list
     (%zm-op! 2 1 "je" #f #t #f
       (fn (_ ops st br tx next)
         (def a (%zm-g ops 0))
         (def bs (if (null? ops) () (rest ops)))
-        (fn (_)
-          (def x (a))
-          (def ys (%zm-eval-all bs))
-          (def any (fn (self l) (if (null? l) #f (if (zm= (first l) x) #t (self (rest l))))))
-          (%zm-br (any ys) br next))))
+        (if (if (null? bs) #f (null? (rest bs)))
+          (do
+            (def b (first bs))
+            (%zm-branch-on (fn (_) (def x (a)) (zm= x (b))) br next))
+          (%zm-branch-on
+            (fn (_)
+              (def x (a))
+              (def ys (%zm-eval-all bs))
+              (def any (fn (self l) (if (null? l) #f (if (zm= (first l) x) #t (self (rest l))))))
+              (any ys))
+            br next))))
     (%zm-op! 2 2 "jl" #f #t #f (%zm-branch2 (fn (_ x y) (zm< (%zm-s x) (%zm-s y)))))
     (%zm-op! 2 3 "jg" #f #t #f (%zm-branch2 (fn (_ x y) (zm< (%zm-s y) (%zm-s x)))))
     (%zm-op! 2 4 "dec_chk" #f #t #f
@@ -189,14 +225,30 @@
     (%zm-op! 2 13 "store" #f #f #f (%zm-do2 zm-var-poke!))
     (%zm-op! 2 14 "insert_obj" #f #f #f (%zm-do2 zm-obj-insert!))
     (%zm-op! 2 15 "loadw" #t #f #f
-      (%zm-store2 (fn (_ a i) (zm-rw (%zm-w (zm+ a (zm<< i 1)))))))
-    (%zm-op! 2 16 "loadb" #t #f #f (%zm-store2 (fn (_ a i) (zm-rb (%zm-w (zm+ a i))))))
+      (fn (_ ops st br tx next)
+        (def a (%zm-g ops 0))
+        (def b (%zm-g ops 1))
+        (def put (%zm-setter st))
+        (fn (_)
+          (def x (a))
+          (def w (zm& (zm+ x (zm<< (b) 1)) 65535))
+          (put (zm| (zm<< (zm& (%zm-pref %zm-ptr w 1) 255) 8) (zm& (%zm-pref %zm-ptr (zm+ w 1) 1) 255)))
+          next)))
+    (%zm-op! 2 16 "loadb" #t #f #f
+      (fn (_ ops st br tx next)
+        (def a (%zm-g ops 0))
+        (def b (%zm-g ops 1))
+        (def put (%zm-setter st))
+        (fn (_)
+          (def x (a))
+          (put (zm& (%zm-pref %zm-ptr (zm& (zm+ x (b)) 65535) 1) 255))
+          next)))
     (%zm-op! 2 17 "get_prop" #t #f #f (%zm-store2 zm-prop))
     (%zm-op! 2 18 "get_prop_addr" #t #f #f (%zm-store2 zm-prop-addr))
     (%zm-op! 2 19 "get_next_prop" #t #f #f (%zm-store2 zm-prop-next))
-    (%zm-op! 2 20 "add" #t #f #f (%zm-store2 (fn (_ x y) (%zm-w (zm+ x y)))))
-    (%zm-op! 2 21 "sub" #t #f #f (%zm-store2 (fn (_ x y) (%zm-w (zm- x y)))))
-    (%zm-op! 2 22 "mul" #t #f #f (%zm-store2 (fn (_ x y) (%zm-w (zm* x y)))))
+    (%zm-op! 2 20 "add" #t #f #f (%zm-arith2 zm+))
+    (%zm-op! 2 21 "sub" #t #f #f (%zm-arith2 zm-))
+    (%zm-op! 2 22 "mul" #t #f #f (%zm-arith2 zm*))
     (%zm-op! 2 23 "div" #t #f #f (%zm-store2 %zm-div))
     (%zm-op! 2 24 "mod" #t #f #f (%zm-store2 %zm-mod))
     (if (zm< v 4) ()
@@ -212,7 +264,10 @@
             (fn (_) (def x (a)) (def y (b)) (zm-throw x y))))))
 
     ; 1OP
-    (%zm-op! 1 0 "jz" #f #t #f (%zm-branch1 (fn (_ x) (zm= x 0))))
+    (%zm-op! 1 0 "jz" #f #t #f
+      (fn (_ ops st br tx next)
+        (def a (%zm-g ops 0))
+        (%zm-branch-on (fn (_) (zm= (a) 0)) br next)))
     (%zm-op! 1 1 "get_sibling" #t #t #f
       (fn (_ ops st br tx next)
         (def a (%zm-g ops 0))
@@ -292,8 +347,26 @@
     ; VAR
     (%zm-op! 3 0 (if (zm< v 4) "call" "call_vs") #t #f #f (%zm-caller #t))
     (%zm-op! 3 1 "storew" #f #f #f
-      (%zm-do3 (fn (_ a i x) (zm-ww! (%zm-w (zm+ a (zm<< i 1))) x))))
-    (%zm-op! 3 2 "storeb" #f #f #f (%zm-do3 (fn (_ a i x) (zm-wb! (%zm-w (zm+ a i)) x))))
+      (fn (_ ops st br tx next)
+        (def a (%zm-g ops 0))
+        (def b (%zm-g ops 1))
+        (def c (%zm-g ops 2))
+        (fn (_)
+          (def x (a))
+          (def w (zm& (zm+ x (zm<< (b) 1)) 65535))
+          (def v (c))
+          (zm-ww! w v)
+          next)))
+    (%zm-op! 3 2 "storeb" #f #f #f
+      (fn (_ ops st br tx next)
+        (def a (%zm-g ops 0))
+        (def b (%zm-g ops 1))
+        (def c (%zm-g ops 2))
+        (fn (_)
+          (def x (a))
+          (def w (zm& (zm+ x (b)) 65535))
+          (%zm-pset! %zm-ptr w (zm& (c) 255) 1)
+          next)))
     (%zm-op! 3 3 "put_prop" #f #f #f (%zm-do3 zm-prop-put!))
     ; sread and aread: text, parse, then (from version 4) a timer of tenths
     ; and the routine it calls; aread stores the terminator
