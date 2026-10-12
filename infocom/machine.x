@@ -51,12 +51,12 @@
 ; other collect is.
 (def %zm-run-sweep 50000)
 (def %zm-run-from
-  (fn (self pc k)
-    (if (zm< pc 0) pc
+  (fn (self l k)
+    (if (null? l) %zm-end-pc
       (if (zm= k 0)
-        (do (Heap collect) (self pc %zm-run-sweep))
-        (self ((zm-insn-at pc)) (zm- k 1))))))
-(def zm-run (fn (_ pc) (%zm-run-from pc %zm-run-sweep)))
+        (do (Heap collect) (self l %zm-run-sweep))
+        (self (l) (zm- k 1))))))
+(def zm-run (fn (_ pc) (%zm-run-from (zm-link-at pc) %zm-run-sweep)))
 
 ; Run the story at path on the given command lines, echoed as typed.
 (def zm-play

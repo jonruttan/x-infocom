@@ -19,7 +19,7 @@
 ; address.  store is the variable number, or -1.
 
 (provide infocom/decode
-  zm-parse zm-insn-at zm-decode-reset! zm-op-entry
+  zm-parse zm-insn-at zm-link-at zm-decode-reset! zm-op-entry
   %zm-optab-set!)
 
 ; One table a kind, 32 entries, each (name store? branch? text? builder);
@@ -128,16 +128,34 @@
   (fn (_ off after)
     (if (if (zm= off 0) #t (zm= off 1)) off (zm- (zm+ after off) 2))))
 
-; An operand as a getter: a constant answers itself, variable 0 pops.
+; An operand as a getter: a constant answers itself, variable 0 pops, a
+; global reads its two bytes in place.
 (def %zm-getter
   (fn (_ o)
     (def v (rest o))
     (if (zm= (first o) 2)
       (if (zm= v 0) zm-pop
         (if (zm< v 16)
-          (fn (_) (%zm-obj-ref %zm-locals v))
-          (do (def g (%zm-global-addr v)) (fn (_) (zm-rw g)))))
+          (do (def off (zm<< v 1)) (fn (_) (%zm-pref %zm-lptr off 2)))
+          (do
+            (def g (%zm-global-addr v))
+            (def g1 (zm+ g 1))
+            (fn (_)
+              (zm| (zm<< (zm& (%zm-pref %zm-ptr g 1) 255) 8) (zm& (%zm-pref %zm-ptr g1 1) 255))))))
       (fn (_) v))))
+
+; A store variable as a setter: variable 0 pushes.
+(def %zm-setter
+  (fn (_ v)
+    (if (zm= v 0) zm-push
+      (if (zm< v 16)
+        (do (def off (zm<< v 1)) (fn (_ x) (%zm-pset! %zm-lptr off x 2)))
+        (do
+          (def g (%zm-global-addr v))
+          (def g1 (zm+ g 1))
+          (fn (_ x)
+            (%zm-pset! %zm-ptr g (zm& (zm>> x 8) 255) 1)
+            (%zm-pset! %zm-ptr g1 (zm& x 255) 1)))))))
 
 ; The address of the instruction being built, for the one builder that
 ; needs its own address rather than the next: a save records where its
@@ -154,15 +172,50 @@
     (builder (List map %zm-getter (first r)) (first (rest r)) (first (rest (rest r)))
       (first (rest (rest (rest r)))) (first (rest (rest (rest (rest r))))))))
 
+; The cache holds (closure . link) for each address at or past the base.
+(def %zm-cached
+  (fn (_ pc)
+    (def hit (%zm-obj-ref %zm-icache (zm+ pc 1)))
+    (if (null? hit)
+      (do
+        (def c (%zm-build pc))
+        (def entry (pair c (%zm-linked c)))
+        (%zm-obj-set! %zm-icache (zm+ pc 1) entry)
+        entry)
+      hit)))
+
 (def zm-insn-at
   (fn (_ pc)
-    (if (zm< pc zm-hdr-static)
-      (%zm-build pc)
-      (do
-        (def hit (%zm-obj-ref %zm-icache (zm+ pc 1)))
-        (if (null? hit)
+    (if (zm< pc zm-hdr-static) (%zm-build pc) (first (%zm-cached pc)))))
+
+; A link runs its instruction and answers the link of the one after, or ()
+; when the instruction answers a negative pc, which is left in %zm-end-pc.
+; It keeps the links of the last two cached instructions it went on to --
+; the next in line and a branch's target, mostly -- so a step there makes
+; no cache lookup.
+(def %zm-end-pc 0)
+
+(def zm-link-at
+  (fn (_ pc)
+    (match
+      ((zm< pc 0) (do (set! %zm-end-pc pc) ()))
+      ((zm< pc zm-hdr-static) (%zm-linked (%zm-build pc)))
+      (#t (rest (%zm-cached pc))))))
+
+(def %zm-linked
+  (fn (_ c)
+    (def p1 -1)
+    (def l1 ())
+    (def p2 -1)
+    (def l2 ())
+    (fn (_)
+      (def p (c))
+      (match
+        ((zm= p p1) l1)
+        ((zm= p p2) l2)
+        (#t
           (do
-            (def c (%zm-build pc))
-            (%zm-obj-set! %zm-icache (zm+ pc 1) c)
-            c)
-          hit)))))
+            (def l (zm-link-at p))
+            (if (zm< p zm-hdr-static) ()
+              (do (set! p2 p1) (set! l2 l1) (set! p1 p) (set! l1 l)))
+            l))))))

@@ -111,7 +111,7 @@
         (if (zm< %zm-nlocals i) ()
           (do
             (%zdb-say "  l") (%zdb-hex i 2) (%zdb-say " ")
-            (%zdb-hex (%zm-obj-ref %zm-locals i) 4) (%zdb-nl)
+            (%zdb-hex (zm-locals-ref %zm-locals i) 4) (%zdb-nl)
             (self (zm+ i 1))))))
     (if (zm= %zm-nlocals 0) (do (%zdb-say "  none") (%zdb-nl)) (go 1))))
 
@@ -120,7 +120,7 @@
     (def go
       (fn (self i)
         (if (zm< %zm-sp i) ()
-          (do (%zdb-say "  ") (%zdb-hex (%zm-obj-ref %zm-stack i) 4) (%zdb-nl) (self (zm+ i 1))))))
+          (do (%zdb-say "  ") (%zdb-hex (zm-stack-ref i) 4) (%zdb-nl) (self (zm+ i 1))))))
     (if (zm= %zm-sp %zm-base) (do (%zdb-say "  empty") (%zdb-nl)) (go (zm+ %zm-base 1)))))
 
 (def %zdb-memory

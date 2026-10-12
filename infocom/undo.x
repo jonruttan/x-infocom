@@ -19,19 +19,12 @@
 
 (def zm-undo-reset! (fn (_) (set! %zm-undo ())))
 
-(def %zm-copy-locals
-  (fn (_ v)
-    (def c (%zm-vec 15))
-    (def go (fn (self i) (if (zm< i 16) (do (%zm-obj-set! c i (%zm-obj-ref v i)) (self (zm+ i 1))))))
-    (go 1)
-    c))
-
 ; A frame is (return-pc store locals base argc nlocals); its locals are
 ; written in place, so a state keeps its own copy.
 (def %zm-copy-frame
   (fn (_ f)
     (def r (rest (rest f)))
-    (pair (first f) (pair (first (rest f)) (pair (%zm-copy-locals (first r)) (rest r))))))
+    (pair (first f) (pair (first (rest f)) (pair (zm-locals-copy (first r)) (rest r))))))
 
 (def %zm-take
   (fn (self l n) (if (if (null? l) #t (zm= n 0)) () (pair (first l) (self (rest l) (zm- n 1))))))
@@ -42,11 +35,12 @@
     (def n zm-hdr-static)
     (def m (%zm-str-make (zm+ n 1)))
     (%zm-mem-copy (%zm-str->ptr m) %zm-ptr n)
-    (def stack (%zm-vec %zm-sp))
-    (def copy (fn (self i) (if (zm< %zm-sp i) () (do (%zm-obj-set! stack i (%zm-obj-ref %zm-stack i)) (self (zm+ i 1))))))
-    (copy 1)
+    ; the stack's words up to the top, as one block
+    (def bytes (zm<< (zm+ %zm-sp 1) 1))
+    (def stack (%zm-str-make (zm+ bytes 1)))
+    (%zm-mem-copy (%zm-str->ptr stack) %zm-sptr bytes)
     (def state
-      (list m stack %zm-sp %zm-base zm-argc %zm-nlocals (%zm-copy-locals %zm-locals)
+      (list m stack %zm-sp %zm-base zm-argc %zm-nlocals (zm-locals-copy %zm-locals)
         (List map %zm-copy-frame %zm-frames) next st))
     (set! %zm-undo (%zm-take (pair state %zm-undo) %zm-undo-depth))
     1))
@@ -65,14 +59,13 @@
         (def r (rest s))
         (def stack (first r))
         (def sp (first (rest r)))
-        (def put (fn (self i) (if (zm< sp i) () (do (%zm-obj-set! %zm-stack i (%zm-obj-ref stack i)) (self (zm+ i 1))))))
-        (put 1)
+        (%zm-mem-copy %zm-sptr (%zm-str->ptr stack) (zm<< (zm+ sp 1) 1))
         (def r2 (rest (rest r)))
         (set! %zm-sp sp)
         (set! %zm-base (first r2))
         (set! zm-argc (first (rest r2)))
         (set! %zm-nlocals (first (rest (rest r2))))
-        (set! %zm-locals (first (rest (rest (rest r2)))))
+        (%zm-locals! (first (rest (rest (rest r2)))))
         (def r3 (rest (rest (rest (rest r2)))))
         (set! %zm-frames (first r3))
         (def next (first (rest r3)))

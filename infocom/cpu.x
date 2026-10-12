@@ -7,57 +7,87 @@
 ; @license MIT No Attribution (MIT-0)
 ;
 ; Variable 0 is the top of the stack, 1..15 the routine's locals, 16..255
-; the globals table.  The stack is one vector with a top index; a frame
-; keeps where its routine's part of the stack began, so a return drops
-; whatever the routine left.  Frames are (return-pc store locals base argc)
-; for the caller, pushed on a call and popped on a return.  Program
-; counters are plain addresses, and every operation answers the next one;
-; a negative pc stops the machine.
+; the globals table.  The stack is one buffer of two-byte words with a top
+; index; a frame keeps where its routine's part of the stack began, so a
+; return drops whatever the routine left.  Frames are (return-pc store
+; locals base argc nlocals) for the caller, pushed on a call and popped on
+; a return.  Program counters are plain addresses, and every operation
+; answers the next one; a negative pc stops the machine.
+;
+; The stack and each frame's locals are raw buffers read and written with
+; pref and pset!, which cost a seventh of a vector slot's obj-ref; the
+; pointer to each is held beside it, so a read is one call.
 
 (provide infocom/cpu
   zm-push zm-pop zm-var zm-var-set! zm-var-peek zm-var-poke!
   zm-call zm-call-now zm-return zm-throw zm-frame-id zm-argc zm-cpu-reset!
-  zm-random)
+  zm-random zm-stack-ref zm-locals-ref zm-locals-copy)
 
 (def %zm-stack-size 32768)
 (def %zm-stack ())
+(def %zm-sptr ())
 (def %zm-sp 0)
 (def %zm-base 0)
 (def %zm-locals ())
+(def %zm-lptr ())
 (def %zm-frames ())
 (def zm-argc 0)
 (def %zm-nlocals 0)
 
 (def zm-cpu-reset!
   (fn (_)
-    (set! %zm-stack (%zm-vec %zm-stack-size))
+    (set! %zm-stack (%zm-str-make (zm<< (zm+ %zm-stack-size 1) 1)))
+    (set! %zm-sptr (%zm-str->ptr %zm-stack))
     (set! %zm-sp 0)
     (set! %zm-base 0)
-    (set! %zm-locals (%zm-new-locals))
+    (%zm-locals! (%zm-new-locals))
     (set! %zm-frames ())
     (set! zm-argc 0)
     (set! %zm-nlocals 0)))
 
-; Locals: always 15 slots, so a stray local number reads 0, not past the end.
+; Locals: always 15 words, local i at offset 2i, so a stray local number
+; reads 0, not past the end.  str make does not clear what it makes, so a
+; new frame's locals are copied from a zeroed buffer, made when first
+; needed.
+(def %zm-zero-locals ())
 (def %zm-new-locals
   (fn (_)
-    (def v (%zm-vec 15))
-    (def go (fn (self i) (if (zm< i 16) (do (%zm-obj-set! v i 0) (self (zm+ i 1))))))
-    (go 1)
-    v))
+    (if (null? %zm-zero-locals)
+      (do
+        (set! %zm-zero-locals (%zm-str-make 33))
+        (def z (%zm-str->ptr %zm-zero-locals))
+        (def go (fn (self i) (if (zm< i 32) (do (%zm-pset! z i 0 1) (self (zm+ i 1))))))
+        (go 0)))
+    (def s (%zm-str-make 33))
+    (%zm-mem-copy (%zm-str->ptr s) (%zm-str->ptr %zm-zero-locals) 32)
+    s))
+
+(def %zm-locals! (fn (_ l) (set! %zm-locals l) (set! %zm-lptr (%zm-str->ptr l))))
+
+; Local i of a frame's locals, for whatever reads frames (a save, undo,
+; the debugger), and a frame's locals copied, for a state kept apart.
+(def zm-locals-ref (fn (_ l i) (%zm-pref (%zm-str->ptr l) (zm<< i 1) 2)))
+(def zm-locals-copy
+  (fn (_ l)
+    (def s (%zm-str-make 33))
+    (%zm-mem-copy (%zm-str->ptr s) (%zm-str->ptr l) 32)
+    s))
+
+; Word i of the stack (1 the bottom).
+(def zm-stack-ref (fn (_ i) (%zm-pref %zm-sptr (zm<< i 1) 2)))
 
 (def zm-push
   (fn (_ x)
     (if (zm< %zm-sp %zm-stack-size) ()
       (Err raise (lit infocom) "stack overflow" %zm-sp))
     (set! %zm-sp (zm+ %zm-sp 1))
-    (%zm-obj-set! %zm-stack %zm-sp x)))
+    (%zm-pset! %zm-sptr (zm<< %zm-sp 1) x 2)))
 
 (def zm-pop
   (fn (_)
     (if (zm< %zm-base %zm-sp) ()
       (Err raise (lit infocom) "stack underflow" %zm-sp))
-    (def x (%zm-obj-ref %zm-stack %zm-sp))
+    (def x (%zm-pref %zm-sptr (zm<< %zm-sp 1) 2))
     (set! %zm-sp (zm- %zm-sp 1))
     x))
 
@@ -66,13 +96,13 @@
 (def zm-var
   (fn (_ v)
     (if (zm= v 0) (zm-pop)
-      (if (zm< v 16) (%zm-obj-ref %zm-locals v)
+      (if (zm< v 16) (%zm-pref %zm-lptr (zm<< v 1) 2)
         (zm-rw (%zm-global-addr v))))))
 
 (def zm-var-set!
   (fn (_ v x)
     (if (zm= v 0) (zm-push x)
-      (if (zm< v 16) (%zm-obj-set! %zm-locals v x)
+      (if (zm< v 16) (%zm-pset! %zm-lptr (zm<< v 1) x 2)
         (zm-ww! (%zm-global-addr v) x)))))
 
 ; The indirect forms (inc, dec, load, store, pull...): variable 0 is the
@@ -80,14 +110,14 @@
 (def zm-var-peek
   (fn (_ v)
     (if (zm= v 0)
-      (if (zm< %zm-base %zm-sp) (%zm-obj-ref %zm-stack %zm-sp)
+      (if (zm< %zm-base %zm-sp) (%zm-pref %zm-sptr (zm<< %zm-sp 1) 2)
         (Err raise (lit infocom) "stack underflow" %zm-sp))
       (zm-var v))))
 
 (def zm-var-poke!
   (fn (_ v x)
     (if (zm= v 0)
-      (if (zm< %zm-base %zm-sp) (%zm-obj-set! %zm-stack %zm-sp x)
+      (if (zm< %zm-base %zm-sp) (%zm-pset! %zm-sptr (zm<< %zm-sp 1) x 2)
         (Err raise (lit infocom) "stack underflow" %zm-sp))
       (zm-var-set! v x))))
 
@@ -104,20 +134,22 @@
         (set! %zm-frames
           (pair (list next store %zm-locals %zm-base zm-argc %zm-nlocals) %zm-frames))
         (def locals (%zm-new-locals))
+        (def lp (%zm-str->ptr locals))
         (if (zm< zm-version 5)
           (do
             (def init
               (fn (self i)
                 (if (zm< n i) ()
-                  (do (%zm-obj-set! locals i (zm-rw (zm+ (zm+ a 1) (zm<< (zm- i 1) 1))))
+                  (do (%zm-pset! lp (zm<< i 1) (zm-rw (zm+ (zm+ a 1) (zm<< (zm- i 1) 1))) 2)
                       (self (zm+ i 1))))))
             (init 1)))
         (def fill
           (fn (self i as)
             (if (if (null? as) #t (zm< n i)) ()
-              (do (%zm-obj-set! locals i (first as)) (self (zm+ i 1) (rest as))))))
+              (do (%zm-pset! lp (zm<< i 1) (first as) 2) (self (zm+ i 1) (rest as))))))
         (fill 1 args)
         (set! %zm-locals locals)
+        (set! %zm-lptr lp)
         (set! %zm-nlocals n)
         (set! %zm-base %zm-sp)
         (set! zm-argc (%zm-length args))
@@ -131,7 +163,7 @@
     (set! %zm-frames (rest %zm-frames))
     (set! %zm-sp %zm-base)
     (def r (rest (rest f)))
-    (set! %zm-locals (first r))
+    (%zm-locals! (first r))
     (set! %zm-base (first (rest r)))
     (set! zm-argc (first (rest (rest r))))
     (set! %zm-nlocals (first (rest (rest (rest r)))))

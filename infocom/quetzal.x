@@ -111,9 +111,9 @@
         (def a4 (pair (zm- (zm<< 1 (if (zm< 7 argc) 7 argc)) 1) a3))
         (def a5 (%qz-word (zm- top base) a4))
         (def ls
-          (fn (self i acc) (if (zm< n i) acc (self (zm+ i 1) (%qz-word (%zm-obj-ref locals i) acc)))))
+          (fn (self i acc) (if (zm< n i) acc (self (zm+ i 1) (%qz-word (zm-locals-ref locals i) acc)))))
         (def ss
-          (fn (self i acc) (if (zm< top i) acc (self (zm+ i 1) (%qz-word (%zm-obj-ref %zm-stack i) acc)))))
+          (fn (self i acc) (if (zm< top i) acc (self (zm+ i 1) (%qz-word (zm-stack-ref i) acc)))))
         (ss (zm+ base 1) (ls 1 a5))))
     (def go (fn (self rs acc) (if (null? rs) (%zm-rev acc) (self (rest rs) (frame (first rs) acc)))))
     (go (%qz-routines) ())))
@@ -283,9 +283,9 @@
             (def ls
               (fn (self i)
                 (if (zm< n i) ()
-                  (do (%zm-obj-set! locals i (%qz-rw (zm+ (zm+ a 6) (zm<< i 1)))) (self (zm+ i 1))))))
+                  (do (%zm-pset! (%zm-str->ptr locals) (zm<< i 1) (%qz-rw (zm+ (zm+ a 6) (zm<< i 1))) 2) (self (zm+ i 1))))))
             (ls 1)
-            (set! %zm-locals locals)
+            (%zm-locals! locals)
             (set! %zm-nlocals n)
             (set! zm-argc (argc-of args 0))
             (set! %zm-base %zm-sp)
