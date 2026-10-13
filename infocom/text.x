@@ -386,10 +386,16 @@
               #f)
           (do (%zm-out-byte 10) (set! %zm-col 0) (set! %zm-lower-row ()) (set! %zm-spaces 0))
           (%zm-out-spaces))
-        (def go (fn (self cs) (if (null? cs) () (do (%zm-glyph (first cs)) (self (rest cs))))))
+        ; each character out, and onto the row, newest first
+        (def go
+          (fn (self cs)
+            (if (null? cs) ()
+              (do
+                (%zm-glyph (first cs))
+                (set! %zm-lower-row (pair (first cs) %zm-lower-row))
+                (self (rest cs))))))
         (go (%zm-rev %zm-word))
         (set! %zm-col (zm+ %zm-col %zm-wlen))
-        (set! %zm-lower-row (List append %zm-word %zm-lower-row))
         (set! %zm-word ())
         (set! %zm-wlen 0)))))
 
@@ -435,9 +441,37 @@
           (if %zm-stream1 (zm-upper-zscii c)))
         (%zm-s3-zscii c)))))
 
+; A string can change none of the streams, the window, the font or the
+; transcript bit, so they are asked once: text for the lower window alone,
+; the usual case, goes straight to it, a letter or a digit onto the word in
+; hand.
 (def zm-out-codes
+  (fn (_ cs)
+    (if (if (null? %zm-stream3)
+          (if (zm= zm-window 0)
+            (if %zm-stream1
+              (if (zm= %zm-font 3) #f
+                (if (zm= (zm& (%zm-pref %zm-ptr 17 1) 1) 0) (null? %zm-script-fd) #f))
+              #f)
+            #f)
+          #f)
+      (%zm-screen-codes cs)
+      (%zm-out-each cs))))
+
+(def %zm-out-each
   (fn (self cs)
     (if (null? cs) () (do (zm-out-zscii (first cs)) (self (rest cs))))))
+
+(def %zm-screen-codes
+  (fn (self cs)
+    (if (null? cs) ()
+      (do
+        (def c (first cs))
+        (match
+          ((if (zm< c 33) #t (if (zm< 126 c) #t (zm= c 45)))
+            (if (zm= c 0) () (%zm-screen-zscii c)))
+          (#t (do (set! %zm-word (pair c %zm-word)) (set! %zm-wlen (zm+ %zm-wlen 1)))))
+        (self (rest cs))))))
 
 ; ASCII text from x, for the interpreter's own messages.
 (def zm-out-ascii

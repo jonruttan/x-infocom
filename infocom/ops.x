@@ -84,6 +84,50 @@
         (put (zm& (p x y) 65535))
         next))))
 
+; dec_chk and inc_chk: the variable named by the first operand moved by d,
+; then compared, signed, with the second -- below it for dec_chk, above it
+; for inc_chk.  A constant variable number, the usual case, is read and
+; written in place.
+(def %zm-step-chk
+  (fn (_ d up?)
+    (fn (_ ops st br tx next)
+      (def o (first %zm-building-ops))
+      (def v (rest o))
+      (def b (%zm-g ops 1))
+      (def chk
+        (fn (_ n y)
+          (def sn (if (zm< n 32768) n (zm- n 65536)))
+          (def sy (if (zm< y 32768) y (zm- y 65536)))
+          (if up? (zm< sy sn) (zm< sn sy))))
+      (def test
+        (match
+          ((if (zm= (first o) 2) #t (zm= v 0))
+            (do
+              (def a (%zm-g ops 0))
+              (fn (_)
+                (def var (a))
+                (def y (b))
+                (def n (zm& (zm+ (zm-var-peek var) d) 65535))
+                (zm-var-poke! var n)
+                (chk n y))))
+          ((zm< v 16)
+            (do
+              (def off (zm<< v 1))
+              (fn (_)
+                (def y (b))
+                (def n (zm& (zm+ (%zm-pref %zm-lptr off 2) d) 65535))
+                (%zm-pset! %zm-lptr off n 2)
+                (chk n y))))
+          (#t
+            (do
+              (def g (%zm-global-addr v))
+              (fn (_)
+                (def y (b))
+                (def n (zm& (zm+ (zm-rw g) d) 65535))
+                (zm-ww! g n)
+                (chk n y))))))
+      (%zm-branch-on test br next))))
+
 (def %zm-branch1
   (fn (_ f)
     (fn (_ ops st br tx next)
@@ -203,18 +247,8 @@
             br next))))
     (%zm-op! 2 2 "jl" #f #t #f (%zm-branch2 (fn (_ x y) (zm< (%zm-s x) (%zm-s y)))))
     (%zm-op! 2 3 "jg" #f #t #f (%zm-branch2 (fn (_ x y) (zm< (%zm-s y) (%zm-s x)))))
-    (%zm-op! 2 4 "dec_chk" #f #t #f
-      (%zm-branch2
-        (fn (_ var y)
-          (def n (%zm-w (zm- (zm-var-peek var) 1)))
-          (zm-var-poke! var n)
-          (zm< (%zm-s n) (%zm-s y)))))
-    (%zm-op! 2 5 "inc_chk" #f #t #f
-      (%zm-branch2
-        (fn (_ var y)
-          (def n (%zm-w (zm+ (zm-var-peek var) 1)))
-          (zm-var-poke! var n)
-          (zm< (%zm-s y) (%zm-s n)))))
+    (%zm-op! 2 4 "dec_chk" #f #t #f (%zm-step-chk -1 #f))
+    (%zm-op! 2 5 "inc_chk" #f #t #f (%zm-step-chk 1 #t))
     (%zm-op! 2 6 "jin" #f #t #f (%zm-branch2 (fn (_ x y) (zm= (zm-obj-parent x) y))))
     (%zm-op! 2 7 "test" #f #t #f (%zm-branch2 (fn (_ x y) (zm= (zm& x y) y))))
     (%zm-op! 2 8 "or" #t #f #f (%zm-store2 (fn (_ x y) (zm| x y))))

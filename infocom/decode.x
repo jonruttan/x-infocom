@@ -47,11 +47,10 @@
 (def %zm-types
   (fn (_ a n)
     (def byte-types
-      (fn (_ b)
-        (list (zm& (zm>> b 6) 3) (zm& (zm>> b 4) 3) (zm& (zm>> b 2) 3) (zm& b 3))))
+      (fn (_ b more)
+        (pair (zm& (zm>> b 6) 3) (pair (zm& (zm>> b 4) 3) (pair (zm& (zm>> b 2) 3) (pair (zm& b 3) more))))))
     (def all
-      (if (zm= n 1) (byte-types (zm-rb a))
-        (List append (byte-types (zm-rb a)) (byte-types (zm-rb (zm+ a 1))))))
+      (byte-types (zm-rb a) (if (zm= n 1) () (byte-types (zm-rb (zm+ a 1)) ()))))
     (def take (fn (self ts) (if (if (null? ts) #t (zm= (first ts) 3)) () (pair (first ts) (self (rest ts))))))
     (take all)))
 
@@ -159,8 +158,13 @@
 
 ; The address of the instruction being built, for the one builder that
 ; needs its own address rather than the next: a save records where its
-; branch data is.
+; branch data is.  Its operands as parsed, for a builder that specialises
+; on a constant.
 (def %zm-building-pc 0)
+(def %zm-building-ops ())
+
+(def %zm-getters
+  (fn (self os) (if (null? os) () (pair (%zm-getter (first os)) (self (rest os))))))
 
 (def %zm-build
   (fn (_ pc)
@@ -168,8 +172,9 @@
     (def ins (zm-parse pc))
     (def kind (first ins))
     (def r (rest (rest ins)))
+    (set! %zm-building-ops (first r))
     (def builder (first (rest (rest (rest (rest (zm-op-entry kind (first (rest ins)))))))))
-    (builder (List map %zm-getter (first r)) (first (rest r)) (first (rest (rest r)))
+    (builder (%zm-getters (first r)) (first (rest r)) (first (rest (rest r)))
       (first (rest (rest (rest r)))) (first (rest (rest (rest (rest r))))))))
 
 ; The cache holds (closure . link) for each address at or past the base.
