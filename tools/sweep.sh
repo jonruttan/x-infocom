@@ -58,7 +58,7 @@ run_ours() {
 }
 
 printf '%-40s %s\n' story verdict > "$out/summary.txt"
-find -L "$dir" -type f \( -iname '*.z3' -o -iname '*.z4' -o -iname '*.z5' -o -iname '*.z8' -o -iname '*.zblorb' -o -iname '*.zlb' \) |
+find -L "$dir" -type f \( -iname '*.z3' -o -iname '*.z4' -o -iname '*.z5' -o -iname '*.z7' -o -iname '*.z8' -o -iname '*.zblorb' -o -iname '*.zlb' \) |
 	sort | while IFS= read -r story; do
 	name="$(basename "$story")"
 	key="$(printf '%s' "$story" | cksum | cut -d' ' -f1)-$name"

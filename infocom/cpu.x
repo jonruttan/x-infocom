@@ -129,7 +129,7 @@
     (if (zm= paddr 0)
       (do (if (zm< store 0) () (zm-var-set! store 0)) next)
       (do
-        (def a (zm-unpack paddr))
+        (def a (zm-unpack-routine paddr))
         (def n (zm-rb a))
         (set! %zm-frames
           (pair

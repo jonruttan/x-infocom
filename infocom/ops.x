@@ -328,7 +328,7 @@
         (def a (%zm-g ops 0))
         (fn (_) (zm- (zm+ next (%zm-s (a))) 2))))
     (%zm-op! 1 13 "print_paddr" #f #f #f
-      (%zm-do1 (fn (_ p) (%zm-print-codes (zm-zstring (zm-unpack p))))))
+      (%zm-do1 (fn (_ p) (%zm-print-codes (zm-zstring (zm-unpack-string p))))))
     (%zm-op! 1 14 "load" #t #f #f (%zm-store1 zm-var-peek))
     (if (zm< v 5)
       (%zm-op! 1 15 "not" #t #f #f (%zm-store1 (fn (_ x) (zm^ x 65535))))

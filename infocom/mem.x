@@ -14,7 +14,8 @@
 ; convert at their own seat.
 
 (provide infocom/mem
-  zm-rb zm-rw zm-wb! zm-ww! zm-signed zm-unpack zm-load! zm-reset-memory!
+  zm-rb zm-rw zm-wb! zm-ww! zm-signed zm-unpack-routine zm-unpack-string
+  zm-load! zm-reset-memory!
   zm-checksum
   zm-version zm-size zm-hdr-dict zm-hdr-objects zm-hdr-globals
   zm-hdr-static zm-hdr-abbrev zm-hdr-pc zm-hdr-high)
@@ -49,8 +50,12 @@
 (def zm-signed (fn (_ v) (if (zm< v 32768) v (zm- v 65536))))
 
 ; A packed address: routines and strings sit on 2-, 4- or 8-byte boundaries
-; by version.  Versions 6 and 7, which add offsets, are not served.
-(def zm-unpack (fn (_ p) (zm<< p %zm-pack-shift)))
+; by version, and in version 7 each is counted from its own base, which
+; the header gives in units of 8 bytes.  Version 6 is not served.
+(def %zm-routine-base 0)
+(def %zm-string-base 0)
+(def zm-unpack-routine (fn (_ p) (zm+ (zm<< p %zm-pack-shift) %zm-routine-base)))
+(def zm-unpack-string (fn (_ p) (zm+ (zm<< p %zm-pack-shift) %zm-string-base)))
 
 (def %zm-orig-rb (fn (_ a) (zm& (%zm-pref %zm-orig-ptr a 1) 255)))
 
@@ -120,6 +125,8 @@
       (Err raise (lit infocom) "not a Z-machine story file (shorter than its header)" zm-size))
     (set! %zm-pack-shift
       (if (zm< zm-version 4) 1 (if (zm< zm-version 8) 2 3)))
+    (set! %zm-routine-base (if (zm= zm-version 7) (zm<< (zm-rw 40) 3) 0))
+    (set! %zm-string-base (if (zm= zm-version 7) (zm<< (zm-rw 42) 3) 0))
     (set! zm-hdr-high (zm-rw 4))
     (set! zm-hdr-pc (zm-rw 6))
     (set! zm-hdr-dict (zm-rw 8))

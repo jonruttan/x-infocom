@@ -30,9 +30,9 @@
 (def zm-start!
   (fn (_ path)
     (zm-load! path)
-    (if (if (zm< zm-version 3) #t (if (zm= zm-version 6) #t (zm= zm-version 7)))
+    (if (if (zm< zm-version 3) #t (zm= zm-version 6))
       (Err raise (lit infocom)
-        (Str8 append "story version " (Str8 append (%zm-hex-str zm-version) " not served (3, 4, 5 and 8 are)"))
+        (Str8 append "story version " (Str8 append (%zm-hex-str zm-version) " not served (3, 4, 5, 7 and 8 are)"))
         zm-version))
     (set! %zm-story-name (%zm-stem path))
     (set! %qz-default ())

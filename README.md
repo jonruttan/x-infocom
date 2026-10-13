@@ -26,15 +26,16 @@ two beeps of `sound_effect` ring the terminal's bell.
 
 ## The machine
 
-Story files of versions 3, 4, 5 and 8 load, bare or inside a Blorb file
+Story files of versions 3, 4, 5, 7 and 8 load, bare or inside a Blorb file
 (`.zblorb`, `.zlb`: the story as its Exec 0 resource, found through the
-index or by searching); versions 1, 2, 6 and 7 are
-refused at the start.  Zork I, II and III (version 3) run with output
-identical to dfrotz's: Zork I from its opening through the house and into
-the cellar, II and III through their first rooms.  Two
-version-5 conformance stories pass: CZECH, all 406 of its checks, with a
-transcript identical to its own reference outside the interpreter's
-identity in the header; and Praxix, every test.
+index or by searching); versions 1, 2 and 6 are refused at the start.
+Version 7 is version 5 with routines and strings packed from bases the
+header gives.  Zork I, II and III (version 3) run with output identical to
+dfrotz's: Zork I from its opening through the house and into the cellar,
+II and III through their first rooms.  Two version-5 conformance stories
+pass: CZECH, all 406 of its checks, with a transcript identical to its own
+reference outside the interpreter's identity in the header; and Praxix,
+every test.
 
 An instruction is read once.  The parser turns it into a record, and the
 record into a closure that does the operation and answers the next
