@@ -20,7 +20,7 @@
 
 (def zm-options
   (Opts declare "infocom" "[OPTIONS] STORY"
-    "Play a Z-machine story (versions 3, 4, 5 and 8), or describe it"
+    "Play a Z-machine story (versions 3, 4, 5, 7 and 8), or describe it"
     (list
       (Opts text "Play:")
       (Opts flag "-p" "--plain" "Print lines, not a drawn screen")

@@ -127,7 +127,7 @@
     (zm-dis-code (if (zm< zm-version 5) (zm+ (zm+ a 1) (zm<< n 1)) (zm+ a 1)))))
 
 ; The routine at packed address p.
-(def zm-dis-routine (fn (_ p) (zm-dis-routine-at (zm-unpack p))))
+(def zm-dis-routine (fn (_ p) (zm-dis-routine-at (zm-unpack-routine p))))
 
 ; Run with every instruction printed before it runs: the pc and the
 ; instruction, as zm-dis prints it, for the first limit instructions.

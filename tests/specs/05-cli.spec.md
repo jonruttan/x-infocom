@@ -17,7 +17,7 @@ the known count of Zork I's objects (250).
 ```output
 Usage: infocom [OPTIONS] STORY
 
-Play a Z-machine story (versions 3, 4, 5 and 8), or describe it
+Play a Z-machine story (versions 3, 4, 5, 7 and 8), or describe it
 
 Play:
 	-p,--plain		Print lines, not a drawn screen
