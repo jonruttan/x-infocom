@@ -132,28 +132,36 @@
         (def a (zm-unpack paddr))
         (def n (zm-rb a))
         (set! %zm-frames
-          (pair (list next store %zm-locals %zm-base zm-argc %zm-nlocals) %zm-frames))
+          (pair
+            (pair next (pair store (pair %zm-locals (pair %zm-base (pair zm-argc (pair %zm-nlocals ()))))))
+            %zm-frames))
         (def locals (%zm-new-locals))
         (def lp (%zm-str->ptr locals))
-        (if (zm< zm-version 5)
-          (do
-            (def init
-              (fn (self i)
-                (if (zm< n i) ()
-                  (do (%zm-pset! lp (zm<< i 1) (zm-rw (zm+ (zm+ a 1) (zm<< (zm- i 1) 1))) 2)
-                      (self (zm+ i 1))))))
-            (init 1)))
-        (def fill
-          (fn (self i as)
-            (if (if (null? as) #t (zm< n i)) ()
-              (do (%zm-pset! lp (zm<< i 1) (first as) 2) (self (zm+ i 1) (rest as))))))
-        (fill 1 args)
+        (if (zm< zm-version 5) (%zm-init-locals lp (zm+ a 1) 1 n))
+        (set! zm-argc (%zm-fill-locals lp args 1 n))
         (set! %zm-locals locals)
         (set! %zm-lptr lp)
         (set! %zm-nlocals n)
         (set! %zm-base %zm-sp)
-        (set! zm-argc (%zm-length args))
         (if (zm< zm-version 5) (zm+ (zm+ a 1) (zm<< n 1)) (zm+ a 1))))))
+
+; Before version 5 a routine's header gives its locals' first values, a
+; word each from a.
+(def %zm-init-locals
+  (fn (self lp a i n)
+    (if (zm< n i) ()
+      (do
+        (%zm-pset! lp (zm<< i 1) (zm-rw a) 2)
+        (self lp (zm+ a 2) (zm+ i 1) n)))))
+
+; The arguments into locals i on, as many as there are locals for; answers
+; how many arguments were given.
+(def %zm-fill-locals
+  (fn (self lp as i n)
+    (if (null? as) (zm- i 1)
+      (do
+        (if (zm< n i) () (%zm-pset! lp (zm<< i 1) (first as) 2))
+        (self lp (rest as) (zm+ i 1) n)))))
 
 ; Drop the running routine's frame and stack, putting its caller back;
 ; answers (return-pc . store).
