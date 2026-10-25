@@ -21,7 +21,7 @@
 # the bundle's path: a reused path can serve an image of older code.
 # Each run is held to SWEEP_SECS seconds (default 60) and SWEEP_MB of
 # memory (default 4000: the first run writes the state image, 3.5 GB on
-# x-lang v0.27.0) by ~/.cache/x-claude/guard.sh when it is there.
+# x-lang v0.27.0, release-ref: history) by ~/.cache/x-claude/guard.sh when it is there.
 set -e
 
 dir="$1"
