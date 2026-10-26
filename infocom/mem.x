@@ -13,12 +13,7 @@
 ; kept as an unsigned 16-bit number, 0..65535; the few signed operations
 ; convert at their own seat.
 
-(provide infocom/mem
-  zm-rb zm-rw zm-wb! zm-ww! zm-signed zm-unpack-routine zm-unpack-string
-  zm-load! zm-reset-memory!
-  zm-checksum
-  zm-version zm-size zm-hdr-dict zm-hdr-objects zm-hdr-globals
-  zm-hdr-static zm-hdr-abbrev zm-hdr-pc zm-hdr-high)
+(module infocom/base)
 
 (def %zm-mem ())
 (def %zm-ptr ())

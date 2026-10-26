@@ -13,7 +13,7 @@
 ; different shape -- save, restore, pop/catch, not/call_1n -- is decoded as
 ; the story expects.
 
-(provide infocom/ops zm-ops-install! zm-quit-pc)
+(module infocom/base)
 
 (def zm-quit-pc -1)
 

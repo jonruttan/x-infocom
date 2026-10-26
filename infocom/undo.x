@@ -12,7 +12,7 @@
 ; first, so a game can undo several turns.  restore_undo puts the newest
 ; back and finishes that save_undo a second time, storing 2.
 
-(provide infocom/undo zm-save-undo zm-restore-undo zm-undo-reset!)
+(module infocom/base)
 
 (def %zm-undo ())
 (def %zm-undo-depth 8)

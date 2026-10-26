@@ -10,7 +10,37 @@
 ; lang.xon declares, the bundle's root on the import path, then this file.
 ; Stories under tests/stories are found on the import path, from any
 ; working directory.
-(import infocom/base)
+
+; The machine is the scoped module infocom/base.  The public names the specs
+; call are imported by name; the privates a spec names are reached through
+; the module, and the state the machine rebinds while it runs is read
+; through %base-ref, which evaluates in the module, since a copy taken here
+; would keep the value it had when it was taken.
+(import infocom/base
+  infocom-version zm& zm+ zm- zm-aread zm-beep! zm-before-read! zm-call-now
+  zm-checksum zm-cli-plan zm-debug zm-dis-code zm-echo! zm-file-read-all
+  zm-file-size zm-file-write zm-flush zm-frame-id zm-info-abbrevs
+  zm-info-dict zm-info-header zm-info-objects zm-info-tree zm-input-script!
+  zm-main zm-options zm-out-ascii zm-out-unicode zm-out-zscii zm-output-fd!
+  zm-plain-upper! zm-play zm-rb zm-read-char zm-read-line zm-record-file!
+  zm-record-start! zm-replay-file! zm-restore-file zm-restore-table
+  zm-row-str zm-run zm-rw zm-save-dir! zm-save-table zm-screen-ansi!
+  zm-screen-end! zm-screen-plain! zm-set-colour! zm-set-cursor! zm-set-font!
+  zm-set-true-colour! zm-set-window! zm-split! zm-start! zm-status-codes
+  zm-text-style! zm-transcript-file! zm-unpack-routine zm-unpack-string
+  zm-usage zm-wb! zm-ww! zm< zm= zm>>)
+(def %base-ref (fn (_ name) (eval name (module infocom/base))))
+(def %zm-byte-len (eval (lit %zm-byte-len) (module infocom/base)))
+(def %zm-byte-ref (eval (lit %zm-byte-ref) (module infocom/base)))
+(def %zm-char->int (eval (lit %zm-char->int) (module infocom/base)))
+(def %zm-int->ptr (eval (lit %zm-int->ptr) (module infocom/base)))
+(def %zm-length (eval (lit %zm-length) (module infocom/base)))
+(def %zm-mem-copy (eval (lit %zm-mem-copy) (module infocom/base)))
+(def %zm-pref (eval (lit %zm-pref) (module infocom/base)))
+(def %zm-pset! (eval (lit %zm-pset!) (module infocom/base)))
+(def %zm-ptr->int (eval (lit %zm-ptr->int) (module infocom/base)))
+(def %zm-str->ptr (eval (lit %zm-str->ptr) (module infocom/base)))
+(def %zm-str-make (eval (lit %zm-str-make) (module infocom/base)))
 
 (def zm-story
   (fn (_ name) (%module-resolve-file (Str8 append "tests/stories/" name))))

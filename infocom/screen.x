@@ -18,12 +18,7 @@
 ; The lower window's own output stays in text.x; this file owns everything
 ; drawn by position, and the switch between the two.
 
-(provide infocom/screen
-  zm-screen-plain! zm-screen-ansi! zm-screen-start! zm-screen-end!
-  zm-ansi? zm-window zm-status! zm-status-codes zm-before-read! zm-plain-upper!
-  zm-split! zm-set-window! zm-erase-window! zm-erase-line! zm-set-cursor!
-  zm-cursor zm-text-style! zm-upper-zscii zm-upper-unicode
-  zm-set-colour! zm-set-true-colour! zm-plain-sgr! zm-beep!)
+(module infocom/base)
 
 (def zm-ansi? #f)
 (def %zm-esc-visible? #f)

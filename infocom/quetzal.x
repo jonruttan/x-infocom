@@ -23,8 +23,7 @@
 ; then finishes the save instruction as a success: before version 4 by
 ; taking its branch, after it by storing 2.
 
-(provide infocom/quetzal zm-save zm-restore zm-restore-file zm-save-dir!
-  zm-save-table zm-restore-table)
+(module infocom/base)
 
 (def %zm-save-dir "")
 (def zm-save-dir! (fn (_ dir) (set! %zm-save-dir dir)))

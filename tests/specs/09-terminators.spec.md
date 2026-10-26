@@ -33,7 +33,7 @@ northeast
 ```infocom
 (zm-input-script! (list (pair "north" 129) (pair "up" 133) "!"))
 (zm-start! (zm-story "praxix.z5"))
-(def %tc-at (zm- zm-size 8))
+(def %tc-at (zm- (%base-ref (lit zm-size)) 8))
 (zm-wb! %tc-at 129)
 (zm-wb! (zm+ %tc-at 1) 0)
 (zm-ww! 46 %tc-at)
@@ -54,7 +54,7 @@ up!
 ```infocom
 (zm-input-script! (list (pair "go" 140) (pair "" 254)))
 (zm-start! (zm-story "praxix.z5"))
-(def %tc-at (zm- zm-size 8))
+(def %tc-at (zm- (%base-ref (lit zm-size)) 8))
 (zm-wb! %tc-at 255)
 (zm-wb! (zm+ %tc-at 1) 0)
 (zm-ww! 46 %tc-at)
@@ -77,11 +77,11 @@ go
 ```infocom
 (zm-input-script! (list (pair "Look" 131)))
 (zm-start! (zm-story "praxix.z5"))
-(def %tc-at (zm- zm-size 8))
+(def %tc-at (zm- (%base-ref (lit zm-size)) 8))
 (zm-wb! %tc-at 255)
 (zm-wb! (zm+ %tc-at 1) 0)
 (zm-ww! 46 %tc-at)
-(def %tc-buf (zm- zm-size 40))
+(def %tc-buf (zm- (%base-ref (lit zm-size)) 40))
 (zm-wb! %tc-buf 20)
 (def %tc-term (zm-aread %tc-buf 0 (pair 0 0)))
 (zm-flush)

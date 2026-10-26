@@ -18,10 +18,7 @@
 ; pref and pset!, which cost a seventh of a vector slot's obj-ref; the
 ; pointer to each is held beside it, so a read is one call.
 
-(provide infocom/cpu
-  zm-push zm-pop zm-var zm-var-set! zm-var-peek zm-var-poke!
-  zm-call zm-call-now zm-return zm-throw zm-frame-id zm-argc zm-cpu-reset!
-  zm-random zm-stack-ref zm-locals-ref zm-locals-copy)
+(module infocom/base)
 
 (def %zm-stack-size 32768)
 (def %zm-stack ())

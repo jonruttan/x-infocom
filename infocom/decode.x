@@ -18,12 +18,10 @@
 ; is (on-true . target), target 0 or 1 for return false or true, else the
 ; address.  store is the variable number, or -1.
 
-(provide infocom/decode
-  zm-parse zm-insn-at zm-link-at zm-decode-reset! zm-op-entry
-  %zm-optab-set!)
-
 ; One table a kind, 32 entries, each (name store? branch? text? builder);
 ; ops.x fills them for the story's version.
+(module infocom/base)
+
 (def %zm-optab ())
 
 (def %zm-optab-set!

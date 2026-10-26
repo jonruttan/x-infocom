@@ -14,16 +14,9 @@
 ; zero byte like any other.  Fetched once here; nothing hot dispatches
 ; through a class.
 
-(import x/sys/file)
+(module infocom/base)
 
-(provide infocom/prims
-  zm+ zm- zm* zm/ zm% zm& zm| zm^ zm<< zm>> zm< zm=
-  %zm-pref %zm-pset! %zm-mem-copy %zm-str->ptr %zm-str-make %zm-ptr->int %zm-int->ptr
-  %zm-obj-make %zm-obj-ref %zm-obj-set! %zm-vector-type %zm-vec
-  %zm-char->int %zm-byte-ref %zm-byte-len
-  %zm-rev %zm-rev-onto %zm-length %zm-assq %zm-hex-str
-  zm-file-size zm-file-read-all zm-file-write zm-file-read
-  zm-sys-exit zm-sys-dup2 zm-sys-close)
+(import x/sys/file)
 
 (def zm+ (prim-ref (lit int) (lit +)))
 (def zm- (prim-ref (lit int) (lit -)))

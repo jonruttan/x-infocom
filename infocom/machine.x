@@ -10,13 +10,10 @@
 ; The loop is one tail call an instruction: fetch the closure for pc, run
 ; it, take the pc it answers.
 
-(provide infocom/machine
-  zm-start! zm-run zm-play zm-restart!
-  zm-sread zm-aread zm-scan-table zm-encode-text!
-  zm-copy-table! zm-print-table)
-
 ; The story's file name without its directory or extension: the stem a
 ; save file is named for.
+(module infocom/base)
+
 (def %zm-stem
   (fn (_ path)
     (def n (%zm-byte-len path))

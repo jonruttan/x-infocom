@@ -13,10 +13,10 @@
 ; effects, and zm-main does it; standard input, which under the launcher
 ; waits on descriptor 3, is reclaimed only for play.
 
+(module infocom/base)
+
 (import x/sys/opts)
 (import x/repl/term)
-
-(provide infocom/cli zm-main zm-cli-plan zm-options zm-usage)
 
 (def zm-options
   (Opts declare "infocom" "[OPTIONS] STORY"

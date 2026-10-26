@@ -12,9 +12,7 @@
 ; dictionary (zm-info-dict) and the abbreviations (zm-info-abbrevs).
 ; Addresses and data bytes are hexadecimal, counts decimal.
 
-(provide infocom/info
-  zm-info-header zm-info-object zm-info-objects zm-info-tree zm-info-dict zm-info-abbrevs
-  zm-object-count)
+(module infocom/base)
 
 (def %zm-say (fn (_ s) (zm-out-ascii s)))
 (def %zm-nl (fn (_) (zm-out-zscii 13)))

@@ -7,7 +7,7 @@
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
-(import infocom/base)
+(import infocom/base infocom-version zm-main)
 
 (set! %lang-name "INFOCOM")
 (set! %lang-version infocom-version)

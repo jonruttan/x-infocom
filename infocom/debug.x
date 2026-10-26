@@ -30,7 +30,7 @@
 ; Addresses and global numbers are hexadecimal; counts and objects are
 ; decimal.
 
-(provide infocom/debug zm-debug)
+(module infocom/base)
 
 (def %zdb-breaks ())
 

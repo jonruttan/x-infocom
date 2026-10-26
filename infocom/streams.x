@@ -17,10 +17,7 @@
 ; Each file is the one the command line names, else asked for as a save
 ; file is, offered as <story>.scr or <story>.rec.
 
-(provide infocom/streams
-  zm-transcript-file! zm-script-zscii zm-script-unicode zm-script-close!
-  zm-record-file! zm-record-start! zm-record-stop! zm-line-typed
-  zm-replay-file! zm-input-stream!)
+(module infocom/base)
 
 (def %zm-write-str
   (fn (_ fd s) (zm-file-write fd s (%zm-byte-len s))))

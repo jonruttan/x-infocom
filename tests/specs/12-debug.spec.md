@@ -13,7 +13,7 @@ as the disassembler does.
 ```infocom
 (zm-input-script! (list "s" "s 2" "l" "sp" "bt" "g 0" "x 0 8" "o 1" "pc" "help" "q"))
 (zm-start! (zm-story "zork1.z3"))
-(zm-debug zm-hdr-pc)
+(zm-debug (%base-ref (lit zm-hdr-pc)))
 ```
 ---
 ```output
@@ -60,7 +60,7 @@ as the disassembler does.
 ```infocom
 (zm-input-script! (list "n" "b 50f5" "b 50ec" "b" "c" "bt" "c" "d 50ec" "d 50f5" "b" "q"))
 (zm-start! (zm-story "zork1.z3"))
-(zm-debug zm-hdr-pc)
+(zm-debug (%base-ref (lit zm-hdr-pc)))
 ```
 ---
 ```output
@@ -90,7 +90,7 @@ as the disassembler does.
 ```infocom
 (zm-input-script! (list "c" "quit" "y"))
 (zm-start! (zm-story "zork1.z3"))
-(zm-debug zm-hdr-pc)
+(zm-debug (%base-ref (lit zm-hdr-pc)))
 ```
 ---
 ```output
