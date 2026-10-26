@@ -147,48 +147,53 @@
   (fn (self bs a)
     (if (null? bs) () (if (zm= (first bs) a) (rest bs) (pair (first bs) (self (rest bs) a))))))
 
-; A command on the machine stopped at pc: answers the pc to stop at next,
-; or () to leave.
+; The commands, one static method each, named as typed: each takes the pc
+; the machine is stopped at, the command's words and the frame depth at the
+; stop, and answers the pc to stop at next, or () to leave.
+(def-class Debugger ()
+  (static
+    (method q (self pc words depth) ())
+    (method s (self pc words depth) (%zdb-step pc (%zdb-arg words 1 #f 1)))
+    (method n (self pc words depth)
+      (%zdb-run pc (fn (_ p) (if (zm< depth (zm-frame-id)) #f #t))))
+    (method fin (self pc words depth)
+      (%zdb-run pc (fn (_ p) (zm< (zm-frame-id) depth))))
+    (method c (self pc words depth) (%zdb-run pc %zdb-break?))
+    (method b (self pc words depth)
+      (def a (%zdb-arg words 1 #t ()))
+      (if (null? a) (%zdb-list-breaks)
+        (if (%zdb-break? a) () (set! %zdb-breaks (pair a %zdb-breaks))))
+      pc)
+    (method d (self pc words depth)
+      (def a (%zdb-arg words 1 #t ()))
+      (if (null? a) () (set! %zdb-breaks (%zdb-remove %zdb-breaks a)))
+      pc)
+    (method bt (self pc words depth) (%zdb-bt pc) pc)
+    (method l (self pc words depth) (%zdb-locals) pc)
+    (method sp (self pc words depth) (%zdb-stack) pc)
+    (method g (self pc words depth)
+      (def n (%zdb-arg words 1 #t 0))
+      (%zdb-say "  g") (%zdb-hex n 2) (%zdb-say " ") (%zdb-hex (zm-var (zm+ n 16)) 4) (%zdb-nl)
+      pc)
+    (method x (self pc words depth)
+      (%zdb-memory (%zdb-arg words 1 #t 0) (%zdb-arg words 2 #f 16))
+      pc)
+    (method o (self pc words depth)
+      (def o (%zdb-arg words 1 #f 0))
+      (if (if (zm< 0 o) (zm< o (zm+ (zm-object-count) 1)) #f) (zm-info-object o)
+        (do (%zdb-say "  no object ") (%zdb-say (Str8 str o)) (%zdb-nl)))
+      pc)
+    (method pc (self pc words depth) pc)))
+
+; A command on the machine stopped at pc: the Debugger method it names, an
+; empty line stepping; a word that names none shows the commands.
 (def %zdb-command
   (fn (_ pc words)
-    (def cmd (if (null? words) "" (first words)))
-    (def depth (zm-frame-id))
-    (match
-      ((str=? cmd "q") ())
-      ((if (str=? cmd "s") #t (str=? cmd "")) (%zdb-step pc (%zdb-arg words 1 #f 1)))
-      ((str=? cmd "n")
-        (%zdb-run pc (fn (_ p) (if (zm< depth (zm-frame-id)) #f #t))))
-      ((str=? cmd "fin")
-        (%zdb-run pc (fn (_ p) (zm< (zm-frame-id) depth))))
-      ((str=? cmd "c") (%zdb-run pc %zdb-break?))
-      ((str=? cmd "b")
-        (do
-          (def a (%zdb-arg words 1 #t ()))
-          (if (null? a) (%zdb-list-breaks)
-            (if (%zdb-break? a) () (set! %zdb-breaks (pair a %zdb-breaks))))
-          pc))
-      ((str=? cmd "d")
-        (do
-          (def a (%zdb-arg words 1 #t ()))
-          (if (null? a) () (set! %zdb-breaks (%zdb-remove %zdb-breaks a)))
-          pc))
-      ((str=? cmd "bt") (do (%zdb-bt pc) pc))
-      ((str=? cmd "l") (do (%zdb-locals) pc))
-      ((str=? cmd "sp") (do (%zdb-stack) pc))
-      ((str=? cmd "g")
-        (do
-          (def n (%zdb-arg words 1 #t 0))
-          (%zdb-say "  g") (%zdb-hex n 2) (%zdb-say " ") (%zdb-hex (zm-var (zm+ n 16)) 4) (%zdb-nl)
-          pc))
-      ((str=? cmd "x") (do (%zdb-memory (%zdb-arg words 1 #t 0) (%zdb-arg words 2 #f 16)) pc))
-      ((str=? cmd "o")
-        (do
-          (def o (%zdb-arg words 1 #f 0))
-          (if (if (zm< 0 o) (zm< o (zm+ (zm-object-count) 1)) #f) (zm-info-object o)
-            (do (%zdb-say "  no object ") (%zdb-say (Str8 str o)) (%zdb-nl)))
-          pc))
-      ((str=? cmd "pc") pc)
-      (#t (do (%zdb-say "  ? s n fin c b d bt l sp g x o pc q") (%zdb-nl) pc)))))
+    (def cmd (if (null? words) "s" (if (str=? (first words) "") "s" (first words))))
+    (def m (class-static-ref Debugger (Str8 ->sym cmd)))
+    (if (null? m)
+      (do (%zdb-say "  ? s n fin c b d bt l sp g x o pc q") (%zdb-nl) pc)
+      (m Debugger pc words (zm-frame-id)))))
 
 ; The session: from pc, stopped, until q or the story's end.  A stop shows
 ; the instruction next to run when the machine has moved, or on pc.
