@@ -11,7 +11,7 @@
 ; others through those names at run time, so the order below is only the
 ; order of loading.
 
-(provide infocom/base infocom-version zm-play zm-start! zm-run zm-main zm-argv)
+(provide infocom/base infocom-version zm-play zm-start! zm-run zm-main)
 
 (def infocom-version "0.1.0")
 
