@@ -16,7 +16,7 @@
 (import x/sys/opts)
 (import x/repl/term)
 
-(provide infocom/cli zm-argv zm-main zm-cli-plan zm-options zm-usage)
+(provide infocom/cli zm-main zm-cli-plan zm-options zm-usage)
 
 (def zm-options
   (Opts declare "infocom" "[OPTIONS] STORY"
@@ -44,18 +44,6 @@
       (Opts arg "-D" "--dis" "ADDR" "Disassemble the routine at byte ADDR (hex; 0, the start)"))))
 
 (def zm-usage (fn (_) (Opts usage zm-options)))
-
-(def %zm-engine-flag?
-  (fn (_ s)
-    (if (str=? s "--batch") #t
-      (if (str=? s "--no-color") #t (str=? s "--verbose")))))
-
-(def zm-argv
-  (fn (_ raw)
-    (def ops
-      (List filter (fn (_ a) (not (%zm-engine-flag? a)))
-        (if (pair? raw) (rest raw) ())))
-    (if (if (pair? ops) (str=? (first ops) "--") #f) (rest ops) ops)))
 
 ; A number from text: decimal, or hexadecimal when hex? or led by 0x.
 ; Answers () for anything else.
@@ -211,9 +199,10 @@
     (if (%zm-setting settings (lit debug)) (zm-debug pc) (zm-run pc))
     (zm-screen-end!)))
 
+; The operands are (Sys args 'program) past the engine's path.
 (def zm-main
-  (fn (_ raw)
-    (def plan (zm-cli-plan (zm-argv raw)))
+  (fn (_ operands)
+    (def plan (zm-cli-plan operands))
     (def label (first plan))
     (match
       ((eq? label (lit help))

@@ -13,5 +13,5 @@
 (set! %lang-version infocom-version)
 (set! %repl-prompt "infocom> ")
 
-(unless (null? (zm-argv args))
-  (zm-main args))
+(let ((ops (rest (Sys args (lit program)))))
+  (unless (null? ops) (zm-main ops)))
