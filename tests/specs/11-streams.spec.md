@@ -55,7 +55,7 @@ Release 119 / Serial number 880429
 (zm-input-script! (list "open mailbox" "north"))
 (zm-start! (zm-story "zork1.z3"))
 (zm-record-start!)
-(zm-run zm-hdr-pc)
+(zm-run (%base-ref (lit zm-hdr-pc)))
 (zm-screen-end!)
 (zm-output-fd! 1)
 (File close %st-null)

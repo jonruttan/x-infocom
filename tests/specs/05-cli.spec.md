@@ -68,7 +68,7 @@ Describe, then stop:
 (zm-screen-plain! 0)
 (zm-start! (zm-story "zork1.z3"))
 (zm-info-header)
-(zm-first-lines 6 (fn (_) (zm-dis-code zm-hdr-pc)))
+(zm-first-lines 6 (fn (_) (zm-dis-code (%base-ref (lit zm-hdr-pc)))))
 (zm-screen-plain! 80)
 ()
 ```

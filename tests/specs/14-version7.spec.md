@@ -57,7 +57,7 @@ length the header gives.
     (File close fd)))
 (%v7-write "/tmp/x-infocom-seven.z7")
 (zm-play "/tmp/x-infocom-seven.z7" ())
-(write (list zm-version (zm-unpack-routine 136) (zm-unpack-string 112) (zm= (zm-checksum) (zm-rw 28))))
+(write (list (%base-ref (lit zm-version)) (zm-unpack-routine 136) (zm-unpack-string 112) (zm= (zm-checksum) (zm-rw 28))))
 (newline)
 (%v7-put 0 (list 6))
 (%v7-write "/tmp/x-infocom-six.z6")

@@ -12,11 +12,7 @@
 ; Object 0 is "nothing": reading its links answers 0, and the operations
 ; that would move or mark it do nothing.
 
-(provide infocom/obj
-  zm-obj-parent zm-obj-sibling zm-obj-child
-  zm-attr? zm-attr-set! zm-attr-clear!
-  zm-obj-insert! zm-obj-remove! zm-obj-name
-  zm-prop zm-prop-addr zm-prop-len zm-prop-next zm-prop-put!)
+(module infocom/base)
 
 (def %zm-small? (fn (_) (zm< zm-version 4)))
 

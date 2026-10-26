@@ -12,12 +12,10 @@
 ; a spec hands over a list of strings and echoes each one, as a transcript
 ; would show it.
 
+(module infocom/base)
+
 (import x/repl/term)
 (import x/repl/line)
-
-(provide infocom/input
-  zm-input-fd! zm-input-script! zm-read-line zm-read-raw-line zm-read-char
-  zm-echo! zm-tokenise! zm-lookup zm-history!)
 
 (def %zm-source ())
 (def %zm-echo? #f)

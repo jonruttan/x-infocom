@@ -13,14 +13,10 @@
 ; flush, with ZSCII 155..223 sent as the UTF-8 of the default Unicode
 ; table.  Versions 1 and 2, whose shift rules differ, are not served.
 
-(provide infocom/text
-  zm-zstring zm-zstring-at zm-encode-word
-  zm-out-zscii zm-out-codes zm-out-num zm-out-ascii zm-out-unicode zm-flush
-  zm-stream! zm-text-reset! zm-output-fd! zm-width! zm-col-reset!
-  zm-lines-before-line zm-row-str zm-set-font!)
-
 ; Alphabet 2 from Z-character 6: 6 is the escape (never looked up), 7 a
 ; newline, then the punctuation row.
+(module infocom/base)
+
 (def %zm-a2
   (Vector from-list
     (list 0 13 48 49 50 51 52 53 54 55 56 57 46 44 33 63 95 35 39 34

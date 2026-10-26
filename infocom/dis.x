@@ -16,8 +16,7 @@
 ; global.  -> names the store; ? a branch taken when the test holds, ?~
 ; when it fails, to an address or rtrue/rfalse.  Text is shown quoted.
 
-(provide infocom/dis zm-dis zm-dis-at zm-dis-code zm-dis-routine zm-dis-routine-at
-  zm-trace-run)
+(module infocom/base)
 
 (def %zm-hex-digit (fn (_ d) (if (zm< d 10) (zm+ d 48) (zm+ d 87))))
 
