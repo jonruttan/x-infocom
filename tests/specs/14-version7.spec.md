@@ -67,5 +67,5 @@ length the header gives.
 ```output
 seven
 (7 800 832 #t)
-#<err:infocom story version 6 not served (3, 4, 5, 7 and 8 are)>
+infocom: story version 6 not served (3, 4, 5, 7 and 8 are)
 ```

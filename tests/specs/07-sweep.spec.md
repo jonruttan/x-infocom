@@ -58,7 +58,7 @@ the machine ran their bytes until it met an opcode that does not exist.
 (guard (e (display e)) (zm-start! "/tmp/x-infocom-not-a-story.z5"))
 ```
 ---
-    #<err:infocom not a Z-machine story file (version byte 5d)>
+    infocom: not a Z-machine story file (version byte 5d)
 
 ### a file shorter than the header is refused before the header is written
 
@@ -71,7 +71,7 @@ end.
 (guard (e (display e)) (zm-start! "/tmp/x-infocom-short-story.z5"))
 ```
 ---
-    #<err:infocom not a Z-machine story file (shorter than its header)>
+    infocom: not a Z-machine story file (shorter than its header)
 
 ## read_char away from a terminal
 
