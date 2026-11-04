@@ -58,5 +58,5 @@ The three files:
 ---
 ```output
 ((5 31744 #t) (5 31744 #t))
-#<err:infocom a Blorb file with no Z-code in it (a Glulx game's?)>
+infocom: a Blorb file with no Z-code in it (a Glulx game's?)
 ```
