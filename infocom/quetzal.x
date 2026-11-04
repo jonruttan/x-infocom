@@ -122,7 +122,7 @@
 (def %qz-codes->str
   (fn (_ cs)
     (if (null? cs) ""
-      (%zm-cvt (List map (fn (_ c) ((prim-ref (lit int) (lit ->char)) c)) cs) %zm-string-type))))
+      (%zm-cvt (List map (fn (_ c) (int->char c)) cs) %zm-string-type))))
 
 (def %zm-story-name "story")
 (def %qz-default ())
