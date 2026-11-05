@@ -17,41 +17,45 @@
 (module infocom/base)
 
 (import x/sys/file)
+(import x/core/doors int+ int- int* int/ int% int& int| int<< int>> int< int=
+  ptr-ref ptr-set! mem-copy ptr->int int->ptr int->char str->ptr str-make
+  obj-make obj-ref obj-set! type-of char->int str-byte-ref str-byte-len)
 
-(def zm+ (prim-ref (lit int) (lit +)))
-(def zm- (prim-ref (lit int) (lit -)))
-(def zm* (prim-ref (lit int) (lit *)))
-(def zm/ (prim-ref (lit int) (lit /)))
-(def zm% (prim-ref (lit int) (lit %)))
-(def zm& (prim-ref (lit int) (lit &)))
-(def zm| (prim-ref (lit int) (lit |)))
+; The machine is written against these names; each is the door itself.
+(def zm+ int+)
+(def zm- int-)
+(def zm* int*)
+(def zm/ int/)
+(def zm% int%)
+(def zm& int&)
+(def zm| int|)
 (def zm^ (prim-ref (lit int) (lit ^)))
-(def zm<< (prim-ref (lit int) (lit <<)))
-(def zm>> (prim-ref (lit int) (lit >>)))
-(def zm< (prim-ref (lit int) (lit <)))
-(def zm= (prim-ref (lit int) (lit =)))
+(def zm<< int<<)
+(def zm>> int>>)
+(def zm< int<)
+(def zm= int=)
 
 ; Story memory: a GC-owned (str make) region and its raw pointer.  The
 ; pointer prims take a byte offset and a width; a width-1 read is signed.
-(def %zm-pref (prim-ref (lit ptr) (lit ref)))
-(def %zm-pset! (prim-ref (lit ptr) (lit set!)))
+(def %zm-pref ptr-ref)
+(def %zm-pset! ptr-set!)
 ; (mem copy DST SRC N): a block copy between pointers, memcpy itself.
-(def %zm-mem-copy (prim-ref (lit mem) (lit copy)))
-(def %zm-ptr->int (prim-ref (lit ptr) (lit ->int)))
-(def %zm-int->ptr (prim-ref (lit int) (lit ->ptr)))
-(def %zm-str->ptr (prim-ref (lit str) (lit ->ptr)))
-(def %zm-str-make (prim-ref (lit str) (lit make)))
+(def %zm-mem-copy mem-copy)
+(def %zm-ptr->int ptr->int)
+(def %zm-int->ptr int->ptr)
+(def %zm-str->ptr str->ptr)
+(def %zm-str-make str-make)
 
 ; Vectors through the raw slot prims: slot 0 is the length, slots 1..N the
 ; elements, so a vector of 15 holds locals 1..15 at their own numbers.
-(def %zm-obj-make (prim-ref (lit obj) (lit make)))
-(def %zm-obj-ref (prim-ref (lit obj) (lit ref)))
-(def %zm-obj-set! (prim-ref (lit obj) (lit set!)))
-(def %zm-vector-type ((prim-ref (lit type) (lit of)) (Vector make 0 0)))
+(def %zm-obj-make obj-make)
+(def %zm-obj-ref obj-ref)
+(def %zm-obj-set! obj-set!)
+(def %zm-vector-type (type-of (Vector make 0 0)))
 
-(def %zm-char->int (prim-ref (lit char) (lit ->int)))
-(def %zm-byte-ref (prim-ref (lit str) (lit byte-ref)))
-(def %zm-byte-len (prim-ref (lit str) (lit byte-len)))
+(def %zm-char->int char->int)
+(def %zm-byte-ref str-byte-ref)
+(def %zm-byte-len str-byte-len)
 
 (def %zm-rev-onto
   (fn (self l acc)
@@ -86,6 +90,6 @@
 (def %zm-string-type (Type named STRING))
 (def %zm-hex-str
   (fn (_ v)
-    (def digit (fn (_ d) ((prim-ref (lit int) (lit ->char)) (if (zm< d 10) (zm+ d 48) (zm+ d 87)))))
+    (def digit (fn (_ d) (int->char (if (zm< d 10) (zm+ d 48) (zm+ d 87)))))
     (def go (fn (self v acc) (if (zm< v 16) (pair (digit v) acc) (self (zm>> v 4) (pair (digit (zm& v 15)) acc)))))
     (%zm-cvt (go v ()) %zm-string-type)))
