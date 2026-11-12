@@ -1,9 +1,10 @@
 # x-infocom
 
-An Infocom Z-machine on x-lang: an interpreter for story files, and the
-tools around one, as a lang bundle.
+A Z-machine written in [x-lang](https://github.com/jonruttan/x-lang),
+loaded as a lang: an interpreter for Infocom's story files, and the tools
+around one.
 
-    x -l infocom -- [--plain] zork1.z3
+    x -l infocom -- [--plain] tests/stories/zork1.z3
 
 plays a story, reading commands from standard input.  On a terminal the
 screen is drawn with ANSI sequences at the window's size: the status line
@@ -33,7 +34,8 @@ Version 7 is version 5 with routines and strings packed from bases the
 header gives.  Zork I, II and III (version 3) run with output identical to
 dfrotz's: Zork I from its opening through the house and into the cellar,
 II and III through their first rooms.  Two version-5 conformance stories
-pass: CZECH, all 406 of its checks, with a transcript identical to its own
+pass: CZECH, all 425 of its tests (406 passed and 19 print tests, read
+from the transcript), with a transcript identical to its own
 reference outside the interpreter's identity in the header; and Praxix,
 every test.
 
@@ -137,8 +139,10 @@ next read takes.
 - `zm-dis`, `zm-dis-code`, `zm-dis-routine` and `zm-trace-run`
   (infocom/dis.x): a disassembler in the style of txd, over the parser the
   machine runs on, and a run that prints each instruction before it runs.
+  These are x-lang functions, called from a session with the bundle
+  loaded.
 - `zm-info-header`, `-objects`, `-tree`, `-dict` and `-abbrevs`
-  (infocom/info.x): the views behind the describing options.
+  (infocom/info.x): the functions behind the describing options.
 - `tools/oracle.sh STORY COMMANDS`: the transcript dfrotz prints for a story
   and its commands, in the form the interpreter's script mode prints it.
   dfrotz runs in a Podman container built from `tools/Containerfile.oracle`.
@@ -169,6 +173,15 @@ Karger; licence in `tests/stories/README.czech`) and `praxix.z5` is Praxix
 (Zarf and Dannii, public domain; `tests/stories/README.praxix`), both from
 the IF Archive.  `tests/saves` holds a save dfrotz wrote, restored by a spec.
 
+## Install
+
+It needs x-lang at the release `lang.xon` declares.
+
+    make install    # into <share>/langs/infocom
+
 ## Licence
 
-MIT No Attribution; see `LICENSE`.
+MIT No Attribution (MIT-0). See [LICENSE](LICENSE).
+
+This project is not affiliated with Infocom's or Zork's owners; the names
+are theirs.
