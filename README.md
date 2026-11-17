@@ -1,5 +1,7 @@
 # x-infocom
 
+<p align="center"><img src="docs/bitwise-banner.svg" alt="x-infocom, with Bitwise the owl" width="100%"></p>
+
 A Z-machine written in [x-lang](https://github.com/jonruttan/x-lang),
 loaded as a lang: an interpreter for Infocom's story files, and the tools
 around one.
