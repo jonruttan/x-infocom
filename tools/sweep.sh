@@ -17,7 +17,7 @@
 # Usage: sweep.sh DIR OUT [COMMANDS]
 #
 # X names the x to run (default: x on PATH).  The bundle is copied into a
-# fresh langs directory under OUT first, because x keys its state image by
+# fresh bundles directory under OUT first, because x keys its state image by
 # the bundle's path: a reused path can serve an image of older code.
 # Each run is held to SWEEP_SECS seconds (default 60) and SWEEP_MB of
 # memory (default 4000: the first run writes the state image, 3.5 GB on
@@ -42,18 +42,18 @@ if [ -z "$cmds" ]; then
 	: > "$cmds"
 fi
 
-langs="$out/langs.$$"
+langs="$out/bundles.$$"
 mkdir -p "$langs/infocom"
-cp -R "$here/lang.xon" "$here/run.x" "$here/infocom" "$langs/infocom/"
+cp -R "$here/bundle.xon" "$here/lib" "$langs/infocom/"
 
 guard="$HOME/.cache/x-claude/guard.sh"
 run_ours() {
 	if [ -f "$guard" ]; then
-		X_LANG_DIR="$langs/" \
+		X_BUNDLE_DIR="$langs/" \
 			sh "$guard" "${SWEEP_MB:-4000}" "${SWEEP_SECS:-60}" -- \
 			"$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
 	else
-		X_LANG_DIR="$langs/" "$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
+		X_BUNDLE_DIR="$langs/" "$X" -l infocom -- --plain --echo "$1" < "$cmds" 2>&1
 	fi
 }
 
