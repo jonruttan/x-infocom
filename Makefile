@@ -1,20 +1,20 @@
-# Install copies this bundle to <share>/langs/infocom, where `x -l` looks: a lang is
+# Install copies this bundle to <share>/bundles/infocom, where `x -l` looks: a lang is
 # installed when its files are there. No registry, no database.
 
 X ?= x
 
-# The version is derived from git describe, never committed: lang.xon declares
+# The version is derived from git describe, never committed: bundle.xon declares
 # what this lang requires; the installed artifact carries what it is.
 LANG_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 SHARE := $(if $(PREFIX),$(PREFIX)/share/x,$(shell $(X) --share-dir))
-DEST  := $(SHARE)/langs/infocom
+DEST  := $(SHARE)/bundles/infocom
 
 # What a consumer needs to run the lang: the declaration, the entry, the
-# modules.  Not the suite, not the tooling, not CI.
-PAYLOAD := lang.xon run.x infocom
+# holds the entry and the modules.  Not the suite, not the tooling, not CI.
+PAYLOAD := bundle.xon lib
 
 .PHONY: install
-install: ## Install into <share>/langs/infocom
+install: ## Install into <share>/bundles/infocom
 	@test -n "$(SHARE)" || { echo "x-infocom: cannot find an x tree -- set PREFIX or X" >&2; exit 1; }
 	@test -d "$(SHARE)" || { echo "x-infocom: no x tree at $(SHARE)" >&2; exit 1; }
 	rm -rf "$(DEST)"

@@ -177,9 +177,9 @@ the IF Archive.  `tests/saves` holds a save dfrotz wrote, restored by a spec.
 
 ## Install
 
-It needs x-lang at the release `lang.xon` declares.
+It needs x-lang at the release `bundle.xon` declares.
 
-    make install    # into <share>/langs/infocom
+    make install    # into <share>/bundles/infocom
 
 ## Licence
 

@@ -6,16 +6,17 @@
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
 ;
-; The lang kit's generator writes tests/lib/harness.gen.x: the dialect
-; lang.xon declares, the bundle's root on the import path, then this file.
-; Stories under tests/stories are found on the import path, from any
-; working directory.
+; The bundle kit's generator writes tests/lib/harness.gen.x: the dialect
+; bundle.xon declares, the bundle's lib/ on the import path, then this file.
+; Stories under tests/stories are found from the bundle's root, (Bundle root
+; "infocom"), from any working directory.
 
 ; The machine is the scoped module infocom/base.  The public names the specs
 ; call are imported by name; the privates a spec names are reached through
 ; the module, and the state the machine rebinds while it runs is read
 ; through %base-ref, which evaluates in the module, since a copy taken here
 ; would keep the value it had when it was taken.
+(import x/sys/bundle)
 (import infocom/base
   infocom-version zm& zm+ zm- zm-aread zm-beep! zm-before-read! zm-call-now
   zm-checksum zm-cli-plan zm-debug zm-dis-code zm-echo! zm-file-read-all
@@ -43,14 +44,14 @@
 (def %zm-str-make (eval (lit %zm-str-make) (module infocom/base)))
 
 (def zm-story
-  (fn (_ name) (%module-resolve-file (Str8 append "tests/stories/" name))))
+  (fn (_ name) (Str8 append (Bundle root "infocom") (Str8 append "/tests/stories/" name))))
 
 ; Saves from the specs go to the system's temporary directory; a case that
 ; restores a save kept with the suite points the machine at tests/saves.
 (zm-save-dir! "/tmp")
 (def zm-test-dir
   (fn (_ name)
-    (def f (%module-resolve-file (Str8 append "tests/" (Str8 append name "/.keep"))))
+    (def f (Str8 append (Bundle root "infocom") (Str8 append "/tests/" (Str8 append name "/.keep"))))
     (Str8 sub 0 (zm- (%zm-byte-len f) 6) f)))
 
 ; Play a story with its output in a file, then show only the lines that
